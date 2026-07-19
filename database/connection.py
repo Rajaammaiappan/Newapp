@@ -1,8 +1,12 @@
 """Database connection layer.
 
-Uses Turso (libSQL) when TURSO_DATABASE_URL / TURSO_AUTH_TOKEN are configured
+Uses Turso when TURSO_DATABASE_URL / TURSO_AUTH_TOKEN are configured
 (via environment variables or Streamlit secrets), otherwise falls back to a
 local SQLite file `fitcoach.db` for development.
+
+Turso is accessed through its modern HTTP API (v2/pipeline) using plain
+`requests` — no extra database driver needed. This avoids the deprecated
+`libsql-client` package which breaks on newer Turso servers / Python 3.14.
 
 Exposes:
     query(sql, params)   -> list[dict]
@@ -14,6 +18,8 @@ import re
 import sqlite3
 import threading
 from pathlib import Path
+
+import requests
 
 _LOCK = threading.Lock()
 _DB_PATH = Path(__file__).resolve().parent.parent / "fitcoach.db"
@@ -34,10 +40,86 @@ def _turso_config():
     url = _secrets("TURSO_DATABASE_URL")
     token = _secrets("TURSO_AUTH_TOKEN")
     if url and token:
-        return url, token
+        url = str(url).strip().strip('"').strip("'")
+        url = url.replace("libsql://", "https://").replace("wss://", "https://")
+        url = url.rstrip("/")
+        return url, str(token).strip().strip('"').strip("'")
     return None
 
 
+# ---------------------------------------------------------------- Turso HTTP
+class _TursoHTTP:
+    """Minimal client for Turso's /v2/pipeline HTTP API."""
+
+    def __init__(self, url: str, token: str):
+        self.endpoint = f"{url}/v2/pipeline"
+        self.session = requests.Session()
+        self.session.headers.update({
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        })
+
+    @staticmethod
+    def _arg(v):
+        if v is None:
+            return {"type": "null", "value": None}
+        if isinstance(v, bool):
+            return {"type": "integer", "value": str(int(v))}
+        if isinstance(v, int):
+            return {"type": "integer", "value": str(v)}
+        if isinstance(v, float):
+            return {"type": "float", "value": v}
+        if isinstance(v, (bytes, bytearray)):
+            import base64
+            return {"type": "blob", "base64": base64.b64encode(bytes(v)).decode()}
+        return {"type": "text", "value": str(v)}
+
+    @staticmethod
+    def _val(cell):
+        if cell is None:
+            return None
+        t = cell.get("type")
+        v = cell.get("value")
+        if t == "null":
+            return None
+        if t == "integer":
+            return int(v)
+        if t == "float":
+            return float(v)
+        return v
+
+    def run(self, statements):
+        """statements: list of (sql, params). Returns list of result dicts."""
+        reqs = [{"type": "execute",
+                 "stmt": {"sql": sql, "args": [self._arg(p) for p in params]}}
+                for sql, params in statements]
+        reqs.append({"type": "close"})
+        resp = self.session.post(self.endpoint, json={"requests": reqs}, timeout=30)
+        if resp.status_code in (401, 403):
+            raise RuntimeError(
+                "Turso says the auth token is invalid or expired. "
+                "Create a new token in the Turso dashboard and update it in "
+                "Streamlit secrets (TURSO_AUTH_TOKEN).")
+        if resp.status_code == 404:
+            raise RuntimeError(
+                "Turso database URL not found. Check TURSO_DATABASE_URL in "
+                "Streamlit secrets — it should look like "
+                "libsql://your-db-yourorg.turso.io with no extra spaces.")
+        resp.raise_for_status()
+        out = []
+        for item in resp.json().get("results", []):
+            if item.get("type") == "error":
+                err = item.get("error", {})
+                raise RuntimeError(f"Turso SQL error: {err.get('message', err)}")
+            out.append(item.get("response", {}).get("result", {}))
+        return out
+
+    def execute(self, sql, params=()):
+        res = self.run([(sql, list(params))])
+        return res[0] if res else {}
+
+
+# ---------------------------------------------------------------- selection
 _client = None
 _mode = None  # "turso" | "sqlite"
 
@@ -49,19 +131,19 @@ def _get_client():
         return _client
     cfg = _turso_config()
     if cfg:
-        try:
-            import libsql_client
-            url = cfg[0].replace("libsql://", "https://")
-            _client = libsql_client.create_client_sync(url=url, auth_token=cfg[1])
-            _mode = "turso"
+        client = _TursoHTTP(cfg[0], cfg[1])
+        try:  # verify credentials once with a harmless statement
+            client.execute("SELECT 1")
+            _client, _mode = client, "turso"
             return _client
-        except Exception as exc:  # fall back rather than crash
-            print(f"[db] Turso connection failed ({exc}); using local SQLite.")
+        except Exception as exc:
+            # Credentials configured but broken → surface a clear error instead
+            # of silently writing to an ephemeral local file on Streamlit Cloud.
+            raise RuntimeError(f"Cannot connect to Turso: {exc}") from exc
     conn = sqlite3.connect(str(_DB_PATH), check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
-    _client = conn
-    _mode = "sqlite"
+    _client, _mode = conn, "sqlite"
     return _client
 
 
@@ -70,9 +152,10 @@ def query(sql: str, params: tuple = ()) -> list:
     client = _get_client()
     with _LOCK:
         if _mode == "turso":
-            rs = client.execute(sql, list(params))
-            cols = rs.columns
-            return [dict(zip(cols, row)) for row in rs.rows]
+            result = client.execute(sql, params)
+            cols = [c.get("name") for c in result.get("cols", [])]
+            return [dict(zip(cols, [client._val(c) for c in row]))
+                    for row in result.get("rows", [])]
         cur = client.execute(sql, params)
         return [dict(r) for r in cur.fetchall()]
 
@@ -82,8 +165,9 @@ def execute(sql: str, params: tuple = ()):
     client = _get_client()
     with _LOCK:
         if _mode == "turso":
-            rs = client.execute(sql, list(params))
-            return getattr(rs, "last_insert_rowid", None)
+            result = client.execute(sql, params)
+            rid = result.get("last_insert_rowid")
+            return int(rid) if rid is not None else None
         cur = client.execute(sql, params)
         client.commit()
         return cur.lastrowid
@@ -94,8 +178,10 @@ def executescript(sql: str):
     client = _get_client()
     with _LOCK:
         if _mode == "turso":
-            for stmt in [s.strip() for s in re.split(r";\s*\n", sql) if s.strip()]:
-                client.execute(stmt)
+            stmts = [(s.strip(), []) for s in re.split(r";\s*(?:\n|$)", sql) if s.strip()]
+            # send in batches of 20 statements per request
+            for i in range(0, len(stmts), 20):
+                client.run(stmts[i:i + 20])
         else:
             client.executescript(sql)
             client.commit()

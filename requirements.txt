@@ -1,0 +1,10 @@
+streamlit>=1.36
+libsql-client
+bcrypt
+plotly
+pandas
+streamlit-option-menu
+Pillow
+openpyxl
+fpdf2
+requests

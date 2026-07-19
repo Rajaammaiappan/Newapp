@@ -1,0 +1,181 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --bg: #0e1117;
+  --surface: #1a1f2b;
+  --surface-2: #232a3b;
+  --border: rgba(255,255,255,0.08);
+  --text: #f5f6fa;
+  --text-muted: #9aa4b2;
+  --primary: #6c5ce7;
+  --primary-2: #00cec9;
+  --success: #00b894;
+  --warning: #fdcb6e;
+  --danger: #e17055;
+  --radius: 16px;
+  --shadow: 0 8px 24px rgba(0,0,0,0.35);
+}
+
+html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+#MainMenu, footer, header { visibility: hidden; }
+.stApp { background: var(--bg); }
+.block-container { padding-top: 1.5rem; padding-bottom: 3rem; }
+
+h1, h2, h3, h4 { color: var(--text) !important; font-weight: 700 !important; }
+p, span, label, .stMarkdown { color: var(--text); }
+
+/* ---------- KPI cards ---------- */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin: 8px 0 18px 0; }
+.kpi-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 18px 20px; box-shadow: var(--shadow);
+  transition: transform .2s ease, border-color .2s ease;
+}
+.kpi-card:hover { transform: translateY(-3px); border-color: rgba(108,92,231,.5); }
+.kpi-icon {
+  width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, var(--primary), var(--primary-2));
+  color: #fff; font-size: 18px; margin-bottom: 10px;
+}
+.kpi-value { font-size: 1.7rem; font-weight: 800; color: var(--text); line-height: 1.1; }
+.kpi-label { font-size: .8rem; color: var(--text-muted); margin-top: 2px; letter-spacing: .3px; }
+.kpi-trend-up { color: var(--success); font-size: .75rem; font-weight: 600; }
+.kpi-trend-down { color: var(--danger); font-size: .75rem; font-weight: 600; }
+
+/* ---------- Generic card ---------- */
+.fc-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 20px; box-shadow: var(--shadow); margin-bottom: 14px;
+}
+.fc-card h4 { margin: 0 0 6px 0; }
+
+/* ---------- Meal / exercise cards ---------- */
+.meal-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 18px 20px; margin-bottom: 14px; box-shadow: var(--shadow);
+  transition: transform .15s ease;
+}
+.meal-card:hover { transform: translateY(-2px); }
+.meal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.meal-name { font-weight: 700; font-size: 1.05rem; color: var(--text); }
+.time-badge {
+  background: rgba(108,92,231,.18); color: #b4a7ff; padding: 3px 12px; border-radius: 999px;
+  font-size: .75rem; font-weight: 600;
+}
+.meal-foods { color: var(--text-muted); font-size: .92rem; margin-bottom: 10px; }
+.macro-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip { padding: 4px 12px; border-radius: 999px; font-size: .75rem; font-weight: 600; }
+.chip-cal { background: rgba(253,203,110,.15); color: #fdcb6e; }
+.chip-p   { background: rgba(0,184,148,.15); color: #55efc4; }
+.chip-c   { background: rgba(9,132,227,.15); color: #74b9ff; }
+.chip-f   { background: rgba(225,112,85,.15); color: #fab1a0; }
+
+/* ---------- Status chips ---------- */
+.status-chip { padding: 3px 12px; border-radius: 999px; font-size: .75rem; font-weight: 700; display: inline-block; }
+.status-active  { background: rgba(0,184,148,.15); color: #55efc4; }
+.status-warning { background: rgba(253,203,110,.15); color: #fdcb6e; }
+.status-danger  { background: rgba(225,112,85,.18); color: #fab1a0; }
+
+/* ---------- Progress bar ---------- */
+.fc-progress { background: var(--surface-2); border-radius: 999px; height: 12px; overflow: hidden; margin: 6px 0 14px 0; }
+.fc-progress-fill {
+  height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--primary), var(--primary-2));
+  transition: width .4s ease;
+}
+
+/* ---------- Buttons ---------- */
+.stButton > button {
+  border-radius: 12px; border: 1px solid var(--border);
+  background: var(--surface-2); color: var(--text); font-weight: 600;
+  transition: all .15s ease;
+}
+.stButton > button:hover { border-color: var(--primary); color: #fff; transform: translateY(-1px); }
+.stButton > button[kind="primary"], .stFormSubmitButton > button {
+  background: linear-gradient(135deg, var(--primary), var(--primary-2));
+  border: none; color: #fff; font-weight: 700; border-radius: 12px;
+}
+.stFormSubmitButton > button:hover { filter: brightness(1.1); }
+
+/* ---------- Inputs ---------- */
+.stTextInput input, .stNumberInput input, .stTextArea textarea, .stDateInput input {
+  background: var(--surface-2) !important; color: var(--text) !important;
+  border-radius: 10px !important; border: 1px solid var(--border) !important;
+}
+.stSelectbox > div > div { background: var(--surface-2); border-radius: 10px; }
+
+/* ---------- Chat ---------- */
+.chat-wrap { display: flex; flex-direction: column; gap: 8px; padding: 6px 0 14px 0; }
+.bubble { max-width: 75%; padding: 10px 16px; font-size: .92rem; line-height: 1.4; }
+.bubble-me {
+  align-self: flex-end; background: linear-gradient(135deg, var(--primary), #5f4bd8);
+  color: #fff; border-radius: 16px 16px 4px 16px;
+}
+.bubble-them {
+  align-self: flex-start; background: var(--surface-2); color: var(--text);
+  border-radius: 16px 16px 16px 4px;
+}
+.bubble-time { font-size: .65rem; opacity: .65; margin-top: 3px; }
+
+/* ---------- Login ---------- */
+.login-bg {
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(ellipse at 20% 20%, rgba(108,92,231,.35), transparent 55%),
+    radial-gradient(ellipse at 80% 80%, rgba(0,206,201,.28), transparent 55%),
+    radial-gradient(ellipse at 70% 15%, rgba(225,112,85,.15), transparent 45%),
+    #0a0d13;
+  z-index: 0;
+}
+.login-card {
+  background: rgba(255,255,255,0.07); backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,0.15); border-radius: 22px;
+  padding: 38px 34px; box-shadow: 0 20px 60px rgba(0,0,0,.55);
+  text-align: center;
+}
+.login-logo {
+  width: 66px; height: 66px; margin: 0 auto 14px auto; border-radius: 20px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-2));
+  display: flex; align-items: center; justify-content: center; font-size: 30px; color: #fff;
+}
+.login-title { font-size: 1.6rem; font-weight: 800; color: #fff; margin-bottom: 2px; }
+.login-sub { color: var(--text-muted); font-size: .85rem; margin-bottom: 18px; }
+
+/* ---------- Badges (achievements) ---------- */
+.badge-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; }
+.badge { text-align: center; padding: 22px 12px; border-radius: var(--radius);
+  background: var(--surface); border: 1px solid var(--border); }
+.badge i { font-size: 30px; margin-bottom: 8px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.badge.locked { opacity: .35; filter: grayscale(1); }
+.badge-name { font-weight: 700; font-size: .85rem; color: var(--text); }
+.badge-hint { font-size: .7rem; color: var(--text-muted); margin-top: 3px; }
+
+/* ---------- Sidebar ---------- */
+section[data-testid="stSidebar"] { background: #12161f; border-right: 1px solid var(--border); }
+.sidebar-brand { display: flex; align-items: center; gap: 10px; padding: 6px 4px 16px 4px; }
+.sidebar-brand .logo { width: 38px; height: 38px; border-radius: 12px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-2));
+  display: flex; align-items: center; justify-content: center; color: #fff; font-size: 17px; }
+.sidebar-brand .name { font-weight: 800; font-size: 1.05rem; color: var(--text); }
+.social-row { display: flex; gap: 14px; justify-content: center; padding-top: 10px; }
+.social-row a { color: var(--text-muted); font-size: 18px; }
+.social-row a:hover { color: var(--primary-2); }
+
+/* ---------- Ring ---------- */
+.ring-wrap { display: flex; flex-direction: column; align-items: center; }
+.ring-label { color: var(--text-muted); font-size: .8rem; margin-top: 4px; }
+
+/* ---------- Tables ---------- */
+.stDataFrame { border-radius: var(--radius); overflow: hidden; }
+
+/* ---------- Mobile ---------- */
+@media (max-width: 640px) {
+  .block-container { padding-left: .8rem; padding-right: .8rem; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .kpi-value { font-size: 1.35rem; }
+  .stButton > button { width: 100%; min-height: 44px; }
+  .bubble { max-width: 88%; }
+}

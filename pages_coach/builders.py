@@ -16,7 +16,8 @@ def _client_selector(key):
 
 def diet_builder():
     theme.section_title("fa-utensils", "Diet Plan Builder")
-    t1, t2, t3 = st.tabs(["📚 Templates", "✏️ Build / Edit Plan", "📤 Assign to Client"])
+    t1, t2, t3, t4 = st.tabs(["📚 Templates", "✏️ Build / Edit Plan",
+                              "📤 Assign to Client", "🤖 AI Import"])
 
     with t1:
         for tpl in ps.diet_templates():
@@ -46,6 +47,8 @@ def diet_builder():
                 c1, c2 = st.columns([6, 1])
                 with c1:
                     theme.meal_card(it)
+                    if it.get("day_of_week"):
+                        st.caption(f"📅 {it['day_of_week']} only")
                 if c2.button("🗑", key=f"di{it['id']}"):
                     ps.delete_diet_item(it["id"])
                     st.rerun()
@@ -55,6 +58,10 @@ def diet_builder():
                 mnum = c1.number_input("Meal #", 1, 8, 1)
                 mname = c2.text_input("Meal name", placeholder="Breakfast")
                 mtime = c3.text_input("Time", placeholder="08:00 AM")
+                day = st.selectbox("Which days?",
+                                   ["All days", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+                                   help="Pick a day to build different plans for "
+                                        "Monday to Sunday; 'All days' = same every day")
                 foods = st.text_input("Food items", placeholder="Oats 60g, Banana, Milk 250ml")
                 c4, c5, c6, c7 = st.columns(4)
                 cal = c4.number_input("Calories", 0, 3000, 0)
@@ -65,7 +72,9 @@ def diet_builder():
                 img = st.text_input("Image URL (optional)")
                 if st.form_submit_button("Add meal", use_container_width=True):
                     if mname and foods:
-                        ps.add_diet_item(plan_id, mnum, mname, mtime, foods, cal, p, cb, f, instr, img)
+                        ps.add_diet_item(plan_id, mnum, mname, mtime, foods, cal, p, cb, f,
+                                         instr, img,
+                                         None if day == "All days" else day)
                         st.rerun()
                     else:
                         st.error("Meal name and food items are required.")
@@ -80,6 +89,51 @@ def diet_builder():
             if cid and st.button("Assign diet plan", use_container_width=True):
                 ps.assign_diet_template(tpls[[t["name"] for t in tpls].index(tsel)]["id"], cid)
                 st.success("Diet plan assigned ✅ (previous plan deactivated)")
+
+    with t4:
+        from services import coaching_service as coach_svc
+        st.markdown("""**Workflow — make the plan with any AI, upload it here:**
+1. Go to **Clients → Client Detail** → download the **Profile + AI Prompt** file
+2. Paste it into ChatGPT / Claude / Gemini → it replies with a CSV plan
+3. Save that reply as a `.csv` file (or paste into Excel and save) and upload below
+4. Choose the client → plan is created **day-wise (Mon-Sun)** automatically 🎉""")
+
+        with st.expander("📋 See the exact CSV format the AI must give"):
+            st.code(coach_svc.CSV_EXAMPLE, language="text")
+            st.download_button("⬇️ Download blank template CSV", coach_svc.CSV_EXAMPLE,
+                               file_name="diet_plan_template.csv")
+
+        up = st.file_uploader("Upload plan file (.csv or .xlsx)", type=["csv", "xlsx"])
+        if up is not None:
+            import pandas as pd
+            try:
+                df = (pd.read_csv(up) if up.name.lower().endswith(".csv")
+                      else pd.read_excel(up))
+                df.columns = [str(c).strip() for c in df.columns]
+                st.markdown(f"**Preview — {len(df)} meals found:**")
+                st.dataframe(df.head(12), use_container_width=True, hide_index=True)
+                target_kind = st.radio("Import as", ["Assign directly to a client",
+                                                     "Save as reusable template"],
+                                       horizontal=True)
+                imp_cid = _client_selector("ai_imp") if target_kind.startswith("Assign") else None
+                pname = st.text_input("Plan name", value=up.name.rsplit(".", 1)[0][:40])
+                if st.button("📥 Import Plan", type="primary", use_container_width=True):
+                    rows = df.to_dict("records")
+                    pid, n = ps.import_diet_plan(
+                        rows, pname.strip() or "Imported Plan",
+                        client_id=imp_cid, is_template=imp_cid is None)
+                    if n == 0:
+                        st.error("No valid meals found — check the 'Food' column has values.")
+                    else:
+                        days = ps.plan_days(pid)
+                        st.success(f"Imported ✅ {n} meals"
+                                   + (f" across days: {', '.join(days)}" if days
+                                      else " (same plan every day)")
+                                   + (". Client sees it immediately in Today's Diet!"
+                                      if imp_cid else ". Assign it from the Assign tab."))
+            except Exception as e:
+                st.error(f"Could not read the file: {e}. Make sure it's a valid "
+                         "CSV/Excel with the template columns.")
 
 
 def workout_builder():

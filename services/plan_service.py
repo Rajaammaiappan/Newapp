@@ -28,12 +28,90 @@ def create_diet_plan(name: str, client_id=None, is_template=False) -> int:
 
 
 def add_diet_item(plan_id, meal_number, meal_name, meal_time, food_items,
-                  calories, protein, carbs, fat, instructions="", image_url=""):
+                  calories, protein, carbs, fat, instructions="", image_url="",
+                  day_of_week=None):
     execute("""INSERT INTO diet_items (plan_id, meal_number, meal_name, meal_time, food_items,
-               calories, protein_g, carbs_g, fat_g, instructions, image_url)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+               calories, protein_g, carbs_g, fat_g, instructions, image_url, day_of_week)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
             (plan_id, meal_number, meal_name, meal_time, food_items,
-             calories, protein, carbs, fat, instructions, image_url))
+             calories, protein, carbs, fat, instructions, image_url, day_of_week))
+
+
+DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
+
+def diet_items_for_day(plan_id: int, day: str):
+    """Items for one weekday: day-specific rows plus every-day rows."""
+    return query(
+        "SELECT * FROM diet_items WHERE plan_id=? AND (day_of_week IS NULL "
+        "OR day_of_week='' OR day_of_week=?) ORDER BY meal_number", (plan_id, day))
+
+
+def plan_days(plan_id: int):
+    """Which specific weekdays this plan defines (empty = same every day)."""
+    rows = query("SELECT DISTINCT day_of_week d FROM diet_items "
+                 "WHERE plan_id=? AND day_of_week IS NOT NULL AND day_of_week!=''",
+                 (plan_id,))
+    found = {r["d"] for r in rows}
+    return [d for d in DAYS if d in found]
+
+
+_DAY_ALIASES = {"monday": "Mon", "tuesday": "Tue", "wednesday": "Wed",
+                "thursday": "Thu", "friday": "Fri", "saturday": "Sat",
+                "sunday": "Sun", "mon": "Mon", "tue": "Tue", "tues": "Tue",
+                "wed": "Wed", "thu": "Thu", "thur": "Thu", "thurs": "Thu",
+                "fri": "Fri", "sat": "Sat", "sun": "Sun",
+                "all": None, "everyday": None, "every day": None, "daily": None,
+                "all days": None, "": None}
+
+
+def _norm_day(v):
+    if v is None:
+        return None
+    return _DAY_ALIASES.get(str(v).strip().lower(), None)
+
+
+def import_diet_plan(rows: list, name: str, client_id=None, is_template=False):
+    """Create a diet plan from parsed file rows.
+
+    Each row: dict with keys (case-insensitive): day, meal, time, food,
+    calories, protein, carbs, fat, instructions. Returns (plan_id, item_count).
+    """
+    pid = create_diet_plan(name, client_id=client_id, is_template=is_template)
+    n = 0
+    meal_no = 0
+    for r in rows:
+        low = {str(k).strip().lower(): v for k, v in r.items()}
+        food = str(low.get("food") or low.get("food items") or
+                   low.get("food_items") or "").strip()
+        if not food:
+            continue
+        meal_no += 1
+
+        def num(*keys):
+            for k in keys:
+                v = low.get(k)
+                if v is None or str(v).strip() == "":
+                    continue
+                try:
+                    return float(str(v).replace("kcal", "").replace("g", "").strip())
+                except Exception:
+                    continue
+            return 0
+
+        add_diet_item(
+            pid, meal_no,
+            str(low.get("meal") or low.get("meal name") or f"Meal {meal_no}").strip(),
+            str(low.get("time") or low.get("meal time") or "").strip(),
+            food,
+            num("calories", "kcal", "cal"),
+            num("protein", "protein_g", "protein (g)"),
+            num("carbs", "carbs_g", "carbs (g)"),
+            num("fat", "fat_g", "fat (g)"),
+            str(low.get("instructions") or low.get("notes") or "").strip(),
+            "", _norm_day(low.get("day") or low.get("day of week")))
+        n += 1
+    return pid, n
 
 
 def delete_diet_item(item_id: int):
@@ -47,7 +125,8 @@ def assign_diet_template(template_id: int, client_id: int):
     for it in diet_items(template_id):
         add_diet_item(new_id, it["meal_number"], it["meal_name"], it["meal_time"],
                       it["food_items"], it["calories"], it["protein_g"], it["carbs_g"],
-                      it["fat_g"], it["instructions"], it["image_url"])
+                      it["fat_g"], it["instructions"], it["image_url"],
+                      it.get("day_of_week"))
     return new_id
 
 # ---------------- Workout ----------------

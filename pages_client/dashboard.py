@@ -29,6 +29,50 @@ def render():
     except Exception:
         pass
 
+    # Weekly reminders (weigh-in, food log) — created once per week automatically
+    try:
+        from services import coaching_service as coach_svc
+        coach_svc.maybe_send_weekly_reminders(cid, st.session_state.user_id)
+        days_since, last_w = coach_svc.weigh_in_status(cid)
+        if days_since is None:
+            st.warning("⚖️ **Log your starting weight!** Go to Progress Tracker and "
+                       "add today's weight so we can track your journey.")
+        elif days_since >= 7:
+            st.warning(f"⚖️ **Weekly weigh-in due!** Last update was {days_since} days "
+                       f"ago ({last_w}). Update your weight in Progress Tracker.")
+    except Exception:
+        pass
+
+    # Weekly / monthly target vs achieved
+    try:
+        if c.get("weekly_weight_target_kg"):
+            hist_all = ts.progress_history(cid)
+            wk_target = c["weekly_weight_target_kg"]
+            achieved_wk = achieved_mo = None
+            if hist_all and len(hist_all) >= 2:
+                latest = hist_all[-1]
+                import datetime as _dt
+                for row in reversed(hist_all[:-1]):
+                    d = (_dt.date.fromisoformat(latest["log_date"][:10])
+                         - _dt.date.fromisoformat(row["log_date"][:10])).days
+                    if d >= 6 and achieved_wk is None:
+                        achieved_wk = (row["weight_kg"] or 0) - (latest["weight_kg"] or 0)
+                    if d >= 27:
+                        achieved_mo = (row["weight_kg"] or 0) - (latest["weight_kg"] or 0)
+                        break
+            wk_txt = f"{achieved_wk:+.1f} kg" if achieved_wk is not None else "log weights"
+            mo_txt = f"{achieved_mo:+.1f} kg" if achieved_mo is not None else "—"
+            on_track = achieved_wk is not None and achieved_wk >= wk_target * 0.7
+            theme.kpi_grid([
+                theme.kpi_card("fa-calendar-week", f"{wk_target:+.2f} kg", "Weekly Target"),
+                theme.kpi_card("fa-check-double" if on_track else "fa-hourglass-half",
+                               wk_txt, "Lost This Week"),
+                theme.kpi_card("fa-calendar", f"{wk_target*4.33:+.1f} kg", "Monthly Target"),
+                theme.kpi_card("fa-chart-line", mo_txt, "Lost This Month"),
+            ])
+    except Exception:
+        pass
+
     hist = ts.progress_history(cid)
     weight = c["current_weight_kg"]
     bmi_v = bmi(weight, c["height_cm"]) if weight and c["height_cm"] else None

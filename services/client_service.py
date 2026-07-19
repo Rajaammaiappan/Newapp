@@ -93,3 +93,10 @@ def clients_needing_attention():
           c.membership_end BETWEEN date('now') AND date('now','+7 day')
           OR NOT EXISTS (SELECT 1 FROM activity_logs a WHERE a.user_id = u.id
                          AND a.created_at >= datetime('now','-3 day')))""")
+
+def set_targets(client_id, daily_calorie_target=None, daily_protein_target=None,
+                weekly_weight_target_kg=None):
+    execute("""UPDATE clients SET daily_calorie_target=?, daily_protein_target=?,
+               weekly_weight_target_kg=? WHERE id=?""",
+            (daily_calorie_target, daily_protein_target,
+             weekly_weight_target_kg, client_id))

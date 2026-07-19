@@ -127,9 +127,39 @@ def progress():
     pts = [(r["log_date"], r[key]) for r in hist if r[key] is not None]
     if pts:
         fig = go.Figure(go.Scatter(x=[p[0] for p in pts], y=[p[1] for p in pts],
-                                   mode="lines+markers",
+                                   mode="lines+markers", name="Actual",
                                    line=dict(color=PRIMARY, width=3),
                                    fill="tozeroy", fillcolor="rgba(108,92,231,0.08)"))
+        # Target trajectory (weight chart only): expected weight per week from targets
+        if key == "weight_kg":
+            from services.client_service import get_client
+            me = get_client(cid)
+            wkt = me.get("weekly_weight_target_kg")
+            if wkt:
+                start_d = datetime.date.fromisoformat(pts[0][0][:10])
+                start_w = pts[0][1]
+                end_d = max(datetime.date.fromisoformat(pts[-1][0][:10]),
+                            datetime.date.today())
+                xs, ys = [], []
+                d = start_d
+                while d <= end_d + datetime.timedelta(days=7):
+                    weeks = (d - start_d).days / 7
+                    y = start_w - wkt * weeks
+                    if me.get("target_weight_kg") and wkt > 0:
+                        y = max(y, me["target_weight_kg"])
+                    xs.append(d.isoformat()); ys.append(round(y, 1))
+                    d += datetime.timedelta(days=7)
+                fig.add_scatter(x=xs, y=ys, mode="lines", name="Target pace",
+                                line=dict(color=SECONDARY, width=2, dash="dash"))
+                fig.update_layout(showlegend=True)
+                gap = pts[-1][1] - ys[min(len(ys) - 1,
+                                          (datetime.date.today() - start_d).days // 7)]
+                if gap <= 0.3:
+                    st.success(f"🎉 You're **on target pace** ({wkt:.2f} kg/week plan)!")
+                else:
+                    st.info(f"📊 You're {gap:.1f} kg behind the target line — small "
+                            "adjustments this week can catch it up. Your coach can see "
+                            "this too.")
         st.plotly_chart(style(fig), use_container_width=True)
 
 

@@ -19,9 +19,12 @@ def food_log():
     theme.section_title("fa-bowl-food", "Food Log")
 
     totals = ns.day_totals(cid)
-    targets = ns.plan_targets(cid)
-    t_cal = targets["calories"] if targets else None
-    t_pro = targets["protein"] if targets else None
+    # Personal targets set by coach take priority; else sum of diet plan
+    from services.client_service import get_client
+    me = get_client(cid)
+    plan_t = ns.plan_targets(cid)
+    t_cal = me.get("daily_calorie_target") or (plan_t and plan_t["calories"]) or None
+    t_pro = me.get("daily_protein_target") or (plan_t and plan_t["protein"]) or None
 
     cards = [
         theme.kpi_card("fa-fire", f"{totals['calories']:.0f}",
@@ -41,6 +44,43 @@ def food_log():
             st.caption(f"🎯 {left:.0f} kcal left in today's plan")
         else:
             st.caption(f"⚠️ {-left:.0f} kcal over today's plan target")
+
+    # ---------- Day-End Deficit Summary ----------
+    with st.expander("🌙 Day-End Summary — am I in deficit today?", expanded=False):
+        burned = ss.activity_summary(cid, 1)["kcal"]
+        eaten = totals["calories"]
+        net = eaten - burned
+        # maintenance estimate from body data
+        maint = None
+        try:
+            from utils.calculators import bmr as _bmr, tdee as _tdee
+            if me.get("current_weight_kg") and me.get("height_cm") and me.get("age"):
+                maint = _tdee(_bmr(me["current_weight_kg"], me["height_cm"],
+                                   me["age"], me.get("gender") or "Male"),
+                              me.get("activity_level") or "moderate")
+        except Exception:
+            pass
+        theme.kpi_grid([
+            theme.kpi_card("fa-utensils", f"{eaten:.0f}", "Eaten (kcal)"),
+            theme.kpi_card("fa-fire-flame-curved", f"{burned:.0f}", "Burned (activity)"),
+            theme.kpi_card("fa-scale-balanced", f"{net:.0f}", "Net intake"),
+            theme.kpi_card("fa-bullseye", f"{t_cal:.0f}" if t_cal else "—", "Your target"),
+        ])
+        if maint:
+            deficit = maint + burned - eaten
+            if deficit > 100:
+                st.success(f"🔥 Great! You're in a **{deficit:.0f} kcal deficit** today "
+                           f"(maintenance ~{maint} + burned {burned:.0f} − eaten {eaten:.0f}). "
+                           "Even if you deviated from the plan, this is what matters!")
+            elif deficit >= -100:
+                st.info(f"⚖️ You're around maintenance today ({deficit:+.0f} kcal). "
+                        "A light walk or a lighter dinner keeps the deficit going.")
+            else:
+                st.warning(f"📈 You're **{-deficit:.0f} kcal above maintenance** today. "
+                           "It happens! Get back on plan tomorrow — consistency beats "
+                           "perfection.")
+        st.caption("Tip: enter your calories burned (watch/manual) in **Activity Sync** "
+                   "before checking this at day end.")
 
     tab_quick, tab_photo, tab_today, tab_history = st.tabs(
         ["🍛 Quick Add", "📸 AI Photo Scan", "📋 Today's Log", "📈 History"])

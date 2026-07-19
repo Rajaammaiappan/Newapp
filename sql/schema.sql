@@ -16,6 +16,8 @@ CREATE TABLE IF NOT EXISTS clients (
     gender TEXT, age INTEGER, height_cm REAL,
     start_weight_kg REAL, current_weight_kg REAL, target_weight_kg REAL,
     goal TEXT, activity_level TEXT,
+    daily_calorie_target REAL, daily_protein_target REAL,
+    weekly_weight_target_kg REAL,
     membership_plan TEXT, membership_start TEXT, membership_end TEXT,
     medical_conditions TEXT, food_allergies TEXT, notes TEXT
 );
@@ -35,6 +37,7 @@ CREATE TABLE IF NOT EXISTS diet_items (
     meal_time TEXT,
     food_items TEXT NOT NULL,
     calories INTEGER, protein_g REAL, carbs_g REAL, fat_g REAL,
+    day_of_week TEXT,                  -- NULL = every day, else Mon..Sun
     instructions TEXT, image_url TEXT
 );
 CREATE TABLE IF NOT EXISTS workout_plans (

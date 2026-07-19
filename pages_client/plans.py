@@ -5,6 +5,7 @@ from services import plan_service as ps
 
 
 def diet():
+    import datetime as _dt
     cid = st.session_state.client_id
     theme.section_title("fa-utensils", "Today's Diet")
     plan = ps.active_diet(cid)
@@ -13,9 +14,27 @@ def diet():
                           "It will appear here as soon as it's assigned. 🍽️")
         return
     st.caption(f"Plan: **{plan['name']}**")
-    items = ps.diet_items(plan["id"])
+
+    # Day-wise: pick day, default today
+    day_names = ps.DAYS
+    today_idx = _dt.date.today().weekday()
+    has_days = bool(ps.plan_days(plan["id"]))
+    if has_days:
+        day = st.radio("Day", day_names, index=today_idx, horizontal=True)
+        if day == day_names[today_idx]:
+            st.caption("📅 Showing **today's** plan")
+        items = ps.diet_items_for_day(plan["id"], day)
+    else:
+        items = ps.diet_items(plan["id"])
+
+    if not items:
+        theme.empty_state("fa-mug-hot", "No meals set for this day",
+                          "Your coach may have kept this a flexible day.")
+        return
     for it in items:
         theme.meal_card(it)
+        if it.get("day_of_week"):
+            st.caption(f"📅 {it['day_of_week']} special")
         if it.get("image_url"):
             st.image(it["image_url"], width=280)
     cal = sum(i["calories"] or 0 for i in items)
@@ -29,6 +48,20 @@ def diet():
         <span class="chip chip-c">Carbs {round(c)}g</span>
         <span class="chip chip-f">Fat {round(f)}g</span></div></div>""",
                 unsafe_allow_html=True)
+
+    # Compare with the client's personal target
+    from services.client_service import get_client
+    me = get_client(cid)
+    if me.get("daily_calorie_target"):
+        diff = cal - me["daily_calorie_target"]
+        icon = "✅" if abs(diff) <= 100 else "⚠️"
+        st.caption(f"{icon} Your personal target: **{me['daily_calorie_target']:.0f} kcal** "
+                   f"({'plan matches well' if abs(diff) <= 100 else f'plan is {diff:+.0f} kcal vs target'})"
+                   + (f" · protein target {me['daily_protein_target']:.0f}g"
+                      if me.get("daily_protein_target") else ""))
+    st.info("🍽️ Eating something different today? No problem — log what you actually "
+            "ate in **Food Log**, and your day-end summary will still track your "
+            "calorie deficit correctly.")
 
 
 def workout():

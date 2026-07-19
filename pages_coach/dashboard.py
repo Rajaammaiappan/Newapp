@@ -67,6 +67,61 @@ def clients():
             theme.empty_state("fa-users", "No clients yet", "Create your first client in the next tab.")
 
     with tab_new:
+        st.markdown("##### 1️⃣ Body details — recommendation updates live as you type")
+        m1, m2, m3 = st.columns(3)
+        gender = m1.selectbox("Gender", ["Male", "Female", "Other"], key="nc_gender")
+        age = m2.number_input("Age", 10, 100, 25, key="nc_age")
+        height = m3.number_input("Height (cm)", 100.0, 250.0, 170.0, key="nc_height")
+        m4, m5, m6 = st.columns(3)
+        weight = m4.number_input("Current Weight (kg)", 20.0, 300.0, 70.0, key="nc_weight")
+        target = m5.number_input("Target Weight (kg)", 20.0, 300.0, 65.0, key="nc_target")
+        goal = m6.selectbox("Goal / Package", ["fat_loss", "muscle_gain", "maintenance", "athletic"],
+                            key="nc_goal",
+                            format_func=lambda g: g.replace("_", " ").title())
+        activity = st.selectbox("Activity Level",
+                                ["sedentary", "light", "moderate", "active", "very_active"],
+                                index=2, key="nc_activity")
+
+        from utils.calculators import recommend_targets
+        rec = recommend_targets(gender, age, height, weight, target, activity, goal)
+        weeks_txt = f" · reaches target in ~{rec['weeks_to_goal']} weeks" if rec["weeks_to_goal"] else ""
+        st.markdown(f"""<div class="fc-card" style="border-left:4px solid #6c5ce7;">
+          <b>🤖 Recommended plan for this client</b><br>
+          <span style="color:#9aa4b2;font-size:.85rem;">
+          BMR {rec['bmr']} kcal · Maintenance {rec['tdee']} kcal</span>
+          <div class="macro-chips" style="margin-top:8px;">
+            <span class="chip chip-cal">🎯 Eat {rec['calories']} kcal/day
+              ({'deficit' if rec['deficit']>=0 else 'surplus'} {abs(rec['deficit'])})</span>
+            <span class="chip chip-p">Protein {rec['protein']} g/day</span>
+            <span class="chip chip-c">Weekly {'loss' if rec['weekly_kg']>=0 else 'gain'} {abs(rec['weekly_kg'])} kg</span>
+            <span class="chip chip-f">Monthly ~{abs(rec['monthly_kg'])} kg{weeks_txt}</span>
+          </div></div>""", unsafe_allow_html=True)
+
+        # matching diet templates by calories
+        tpls = ps.diet_templates()
+        matches = []
+        for t in tpls:
+            tcal = sum((i["calories"] or 0) for i in ps.diet_items(t["id"]))
+            if tcal:
+                matches.append((abs(tcal - rec["calories"]), t["name"], tcal))
+        if matches:
+            matches.sort()
+            best = matches[0]
+            st.caption(f"💡 Closest ready template: **{best[1]}** ({best[2]:.0f} kcal) — "
+                       "assign it in Diet Plan Builder after creating the client, "
+                       "or import an AI-made plan there.")
+
+        st.markdown("##### 2️⃣ Targets — auto-filled, change if you want")
+        t1, t2, t3 = st.columns(3)
+        cal_t = t1.number_input("Daily Calorie Target", 800.0, 6000.0,
+                                float(rec["calories"]), 50.0, key="nc_cal")
+        pro_t = t2.number_input("Daily Protein Target (g)", 30.0, 400.0,
+                                float(rec["protein"]), 5.0, key="nc_pro")
+        wk_t = t3.number_input("Weekly Weight Target (kg)", -2.0, 2.0,
+                               float(rec["weekly_kg"]), 0.05, key="nc_wk",
+                               help="Positive = loss per week, negative = gain")
+
+        st.markdown("##### 3️⃣ Account & membership")
         with st.form("new_client"):
             c1, c2 = st.columns(2)
             username = c1.text_input("Username *")
@@ -76,18 +131,10 @@ def clients():
             full_name = c1.text_input("Full Name *")
             email = c2.text_input("Email")
             phone = c1.text_input("Phone")
-            gender = c2.selectbox("Gender", ["Male", "Female", "Other"])
-            age = c1.number_input("Age", 10, 100, 25)
-            height = c2.number_input("Height (cm)", 100.0, 250.0, 170.0)
-            weight = c1.number_input("Current Weight (kg)", 20.0, 300.0, 70.0)
-            target = c2.number_input("Target Weight (kg)", 20.0, 300.0, 65.0)
-            goal = c1.selectbox("Goal", ["fat_loss", "muscle_gain", "maintenance", "athletic"])
-            activity = c2.selectbox("Activity Level",
-                                    ["sedentary", "light", "moderate", "active", "very_active"])
-            plan = c1.text_input("Membership Plan", "Monthly")
-            amount = c2.number_input("Plan Amount (₹)", 0.0, 100000.0, 3500.0)
-            start = c1.date_input("Start Date", datetime.date.today())
-            end = c2.date_input("End Date", datetime.date.today() + datetime.timedelta(days=30))
+            plan = c2.text_input("Membership Plan", "Monthly Fat-Loss")
+            amount = c1.number_input("Plan Amount (₹)", 0.0, 100000.0, 3500.0)
+            start = c2.date_input("Start Date", datetime.date.today())
+            end = c1.date_input("End Date", datetime.date.today() + datetime.timedelta(days=30))
             medical = st.text_area("Medical Conditions", height=68)
             allergies = st.text_area("Food Allergies", height=68)
             notes = st.text_area("Notes", height=68)
@@ -100,8 +147,13 @@ def clients():
                             st.session_state.user_id, username.strip(), password, full_name,
                             email, phone, gender, age, height, weight, target, goal, activity,
                             plan, start.isoformat(), end.isoformat(), medical, allergies, notes)
+                        cs.set_targets(cid, cal_t, pro_t, wk_t)
                         add_subscription(cid, plan, amount, start.isoformat(), end.isoformat())
-                        st.success(f"Client created ✅ Login: **{username} / {password}** — share securely.")
+                        st.success(
+                            f"Client created ✅ Login: **{username} / {password}** — share securely.  \n"
+                            f"Targets saved: {cal_t:.0f} kcal · {pro_t:.0f}g protein · "
+                            f"{wk_t:+.2f} kg/week. Next: assign or import a diet plan "
+                            "in Diet Plan Builder.")
                     except ValueError as e:
                         st.error(str(e))
 
@@ -127,6 +179,48 @@ def clients():
             st.markdown(f"**Diet plan:** {diet['name'] if diet else '— none assigned'}  \n"
                         f"**Workout plan:** {wk['name'] if wk else '— none assigned'}  \n"
                         f"**Medical:** {c['medical_conditions'] or '—'} · **Allergies:** {c['food_allergies'] or '—'}")
+
+            # ---- Targets & AI export ----
+            from services import coaching_service as coach_svc
+            cal_t = c.get("daily_calorie_target")
+            pro_t = c.get("daily_protein_target")
+            wk_t = c.get("weekly_weight_target_kg")
+            st.markdown(f"**🎯 Targets:** "
+                        f"{f'{cal_t:.0f} kcal/day' if cal_t else 'not set'} · "
+                        f"{f'{pro_t:.0f}g protein' if pro_t else 'protein not set'} · "
+                        f"{f'{wk_t:+.2f} kg/week' if wk_t is not None else 'weekly not set'}")
+            with st.expander("✏️ Edit targets / recalculate"):
+                from utils.calculators import recommend_targets
+                try:
+                    rec = recommend_targets(c["gender"] or "Male", c["age"] or 30,
+                                            c["height_cm"] or 170, c["current_weight_kg"] or 70,
+                                            c["target_weight_kg"], c["activity_level"] or "moderate",
+                                            c["goal"] or "fat_loss")
+                    st.caption(f"Recommended now: {rec['calories']} kcal · {rec['protein']}g "
+                               f"protein · {rec['weekly_kg']} kg/week "
+                               f"(maintenance {rec['tdee']} kcal)")
+                except Exception:
+                    rec = {"calories": 2000, "protein": 120, "weekly_kg": 0.5}
+                e1, e2, e3 = st.columns(3)
+                ncal = e1.number_input("Calories/day", 800.0, 6000.0,
+                                       float(cal_t or rec["calories"]), 50.0, key=f"tc{cid}")
+                npro = e2.number_input("Protein g/day", 30.0, 400.0,
+                                       float(pro_t or rec["protein"]), 5.0, key=f"tp{cid}")
+                nwk = e3.number_input("kg/week", -2.0, 2.0,
+                                      float(wk_t if wk_t is not None else rec["weekly_kg"]),
+                                      0.05, key=f"tw{cid}")
+                if st.button("💾 Save targets", key=f"savet{cid}"):
+                    cs.set_targets(cid, ncal, npro, nwk)
+                    st.success("Targets saved ✓")
+                    st.rerun()
+
+            st.download_button(
+                "⬇️ Download Profile + AI Prompt (make diet plan with ChatGPT/Claude)",
+                coach_svc.profile_export_text(c),
+                file_name=f"{(c['full_name'] or 'client').replace(' ','_')}_profile_for_AI.txt",
+                use_container_width=True,
+                help="Paste this file's content into any AI → it returns a CSV plan → "
+                     "upload it in Diet Plan Builder → AI Import tab")
         with d2:
             hist = ts.progress_history(cid)
             if hist:

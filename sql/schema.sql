@@ -161,3 +161,56 @@ CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT
 );
+
+-- ============ Nutrition / Food Logging ============
+CREATE TABLE IF NOT EXISTS food_database (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    category TEXT NOT NULL,            -- Breakfast (South Indian), Lunch, Dinner, Snacks, Drinks...
+    serving TEXT NOT NULL,             -- e.g. "2 pieces", "1 bowl (150g)"
+    calories REAL NOT NULL,
+    protein REAL DEFAULT 0,
+    carbs REAL DEFAULT 0,
+    fat REAL DEFAULT 0,
+    is_active INTEGER DEFAULT 1
+);
+CREATE TABLE IF NOT EXISTS food_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    client_id INTEGER NOT NULL REFERENCES clients(id),
+    log_date TEXT NOT NULL,
+    meal_type TEXT NOT NULL,           -- Breakfast / Lunch / Dinner / Snack
+    food_name TEXT NOT NULL,
+    servings REAL DEFAULT 1,
+    calories REAL NOT NULL,
+    protein REAL DEFAULT 0,
+    carbs REAL DEFAULT 0,
+    fat REAL DEFAULT 0,
+    source TEXT DEFAULT 'database',    -- database / photo_ai / manual
+    photo_path TEXT,
+    ai_notes TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_food_log_client_date ON food_log(client_id, log_date);
+
+-- ============ Activity Sync (Strava etc.) ============
+CREATE TABLE IF NOT EXISTS strava_tokens (
+    client_id INTEGER PRIMARY KEY REFERENCES clients(id),
+    access_token TEXT, refresh_token TEXT,
+    expires_at INTEGER, athlete_name TEXT,
+    connected_at TEXT DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS activity_sync (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    client_id INTEGER NOT NULL REFERENCES clients(id),
+    source TEXT DEFAULT 'strava',      -- strava / manual
+    external_id TEXT,                  -- strava activity id (unique per source)
+    activity_date TEXT NOT NULL,
+    activity_type TEXT,                -- Run / Ride / Walk / Workout...
+    name TEXT,
+    duration_min REAL,
+    distance_km REAL,
+    calories_burned REAL,
+    avg_hr REAL,
+    created_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(source, external_id)
+);

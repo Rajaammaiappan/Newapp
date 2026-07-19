@@ -17,17 +17,27 @@ from services.auth_service import is_authenticated, login
 theme.load_css()
 
 
+@st.cache_resource
 def ensure_db():
-    """Auto-create schema + seed on first run (handy for Streamlit Cloud)."""
+    """Auto-create schema + seed on first run (handy for Streamlit Cloud).
+
+    Also migrates existing databases: schema.sql is idempotent, so new tables
+    (food log, activity sync, ...) are added automatically on upgrade.
+    """
     try:
         query("SELECT 1 FROM users LIMIT 1")
+        has_users = bool(query("SELECT 1 FROM users LIMIT 1"))
     except Exception:
+        has_users = False
+    if not has_users:
         from database.seed import seed
         seed()
-    else:
-        if not query("SELECT 1 FROM users LIMIT 1"):
-            from database.seed import seed
-            seed()
+    else:  # existing db → apply any new tables from schema.sql
+        from database.setup import run as apply_schema
+        apply_schema()
+    from database.seed_foods import seed_foods
+    seed_foods()
+    return True
 
 
 def login_page():
@@ -54,11 +64,13 @@ def login_page():
 
 
 def client_router(page: str):
-    from pages_client import dashboard, plans, trackers, extras
+    from pages_client import dashboard, plans, trackers, extras, nutrition
     routes = {
         "Dashboard": dashboard.render,
         "Today's Diet": plans.diet,
         "Today's Workout": plans.workout,
+        "Food Log": nutrition.food_log,
+        "Activity Sync": nutrition.activity_sync,
         "Progress Tracker": trackers.progress,
         "Measurements": trackers.measurements,
         "Transformation Photos": extras.photos,
@@ -76,13 +88,14 @@ def client_router(page: str):
 
 
 def coach_router(page: str):
-    from pages_coach import dashboard as cd, builders, tools
+    from pages_coach import dashboard as cd, builders, tools, nutrition as cn
     from pages_client.extras import calculators
     routes = {
         "Dashboard": cd.dashboard,
         "Clients": cd.clients,
         "Diet Plan Builder": builders.diet_builder,
         "Workout Builder": builders.workout_builder,
+        "Nutrition & Activity": cn.food_logs_page,
         "Calendar": tools.calendar_page,
         "Files": tools.files_page,
         "Messages": tools.messages_page,

@@ -5,7 +5,8 @@ from services.message_service import unread_count, unread_notifications, get_set
 
 CLIENT_MENU = [
     ("Dashboard", "fa-gauge-high"), ("Today's Diet", "fa-utensils"),
-    ("Today's Workout", "fa-dumbbell"), ("Progress Tracker", "fa-chart-line"),
+    ("Today's Workout", "fa-dumbbell"), ("Food Log", "fa-bowl-food"),
+    ("Activity Sync", "fa-person-running"), ("Progress Tracker", "fa-chart-line"),
     ("Measurements", "fa-ruler"), ("Transformation Photos", "fa-camera"),
     ("Daily Checklist", "fa-list-check"), ("Water Intake", "fa-droplet"),
     ("Sleep Tracker", "fa-moon"), ("Achievements", "fa-trophy"),
@@ -16,6 +17,7 @@ CLIENT_MENU = [
 COACH_MENU = [
     ("Dashboard", "fa-gauge-high"), ("Clients", "fa-users"),
     ("Diet Plan Builder", "fa-utensils"), ("Workout Builder", "fa-dumbbell"),
+    ("Nutrition & Activity", "fa-bowl-food"),
     ("Calendar", "fa-calendar-days"), ("Files", "fa-folder-open"),
     ("Messages", "fa-comments"), ("Notifications", "fa-bell"),
     ("Reports", "fa-file-lines"), ("Calculators", "fa-calculator"),
@@ -56,7 +58,8 @@ def render() -> str:
                         "fa-folder-open": "folder2-open", "fa-comments": "chat-dots",
                         "fa-calculator": "calculator", "fa-user": "person", "fa-gear": "gear",
                         "fa-users": "people", "fa-calendar-days": "calendar3",
-                        "fa-bell": "bell", "fa-file-lines": "file-earmark-text"}
+                        "fa-bell": "bell", "fa-file-lines": "file-earmark-text",
+                        "fa-bowl-food": "cup-hot", "fa-person-running": "lightning-charge"}
             choice = option_menu(
                 None, labels,
                 icons=[icons_bs.get(i, "dot") for _, i in menu],

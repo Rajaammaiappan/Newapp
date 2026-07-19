@@ -20,6 +20,15 @@ def render():
     st.markdown(f"## {greeting()}, {c['full_name'].split()[0]} 💪")
     st.caption(datetime.date.today().strftime("%A, %d %B %Y"))
 
+    # Silent Strava auto-sync (runs once per login if connected)
+    try:
+        from services import strava_service as ss
+        n = ss.auto_sync(cid)
+        if n:
+            st.toast(f"🔄 Synced {n} new activities from Strava")
+    except Exception:
+        pass
+
     hist = ts.progress_history(cid)
     weight = c["current_weight_kg"]
     bmi_v = bmi(weight, c["height_cm"]) if weight and c["height_cm"] else None

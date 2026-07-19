@@ -60,6 +60,25 @@ git push -u origin main
 ```toml
 TURSO_DATABASE_URL = "libsql://fitcoach-yourname.turso.io"
 TURSO_AUTH_TOKEN = "your-long-token"
+
+# AI Food Photo Scanner — 100% FREE
+# 1. Go to https://aistudio.google.com → sign in with any Google account
+# 2. Click "Get API key" → "Create API key" (no credit card, no payment)
+# 3. Paste it below. Free limit: ~1,500 photo scans per day — more than enough.
+GEMINI_API_KEY = "AIza..."
+
+# (Optional paid alternative/backup — not required)
+# ANTHROPIC_API_KEY = "sk-ant-..."
+
+# Optional — Strava activity sync (one-time connect per client, then automatic)
+# Clients install the free Strava app on their phone — it reads phone/watch
+# activity (Apple Watch, Samsung, Garmin, Mi Band...) and this app pulls from
+# Strava automatically on every login. No repeated button pressing.
+# Setup: create an app at https://www.strava.com/settings/api and set the
+# "Authorization Callback Domain" to your app domain (yourapp.streamlit.app)
+STRAVA_CLIENT_ID = "12345"
+STRAVA_CLIENT_SECRET = "..."
+APP_BASE_URL = "https://yourapp.streamlit.app"
 ```
 
 4. Click **Deploy**. On first load the app creates all tables and seed data
@@ -74,14 +93,18 @@ TURSO_AUTH_TOKEN = "your-long-token"
 ## 📱 What's Inside
 
 **Client portal:** Dashboard (KPIs, weight trend, rings) · Diet Plan · Workout Plan
-with completion logging · Daily Checklist with streaks · Water Tracker ·
+with completion logging · **Food Log with South Indian food dropdown (idli, dosa,
+upma, sambar...) + AI meal-photo scanner (calories/protein from a photo)** ·
+**Activity Sync (Strava + manual)** · Daily Checklist with streaks · Water Tracker ·
 Sleep Tracker · Progress + Measurements · Transformation Photos ·
 Achievements · Files · Chat with Coach · Fitness Calculators (BMI, BMR, TDEE,
 macros, body-fat, water, ideal weight) · Profile & Settings
 
 **Coach portal:** Dashboard (business KPIs, needs-attention, activity feed) ·
 Client Management (create / detail / deactivate) · Diet Plan Builder + templates ·
-Workout Plan Builder + templates · Assign plans to clients · Calendar ·
+Workout Plan Builder + templates · **Nutrition & Activity (see every client's
+food logs incl. AI photo entries, activities, manage the food database)** ·
+Assign plans to clients · Calendar ·
 File sharing · Messages · Notifications & reminders · Reports (Excel + PDF
 export) · Branding & subscription settings
 
@@ -89,8 +112,11 @@ export) · Branding & subscription settings
 
 ## 🗺️ Roadmap (not yet implemented)
 
-Payment gateway integration · WhatsApp notifications · Wearable sync ·
-AI plan suggestions · Multi-coach support · Mobile app wrapper
+Payment gateway integration · WhatsApp notifications · Apple Health /
+Samsung Health / Google Fit direct sync (requires a native mobile app — these
+phone apps do not allow websites to read their data; Strava covers this today
+since it syncs with watches and phones) · AI plan suggestions ·
+Multi-coach support · Mobile app wrapper
 
 ---
 

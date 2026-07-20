@@ -25,6 +25,10 @@ def migrate():
         "diet_items": [
             ("day_of_week", "TEXT"),
         ],
+        "food_log": [
+            ("entry_kind", "TEXT DEFAULT 'extra'"),
+            ("replaces_item_id", "INTEGER"),
+        ],
     }
     for table, cols in needed.items():
         try:

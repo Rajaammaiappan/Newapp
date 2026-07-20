@@ -47,14 +47,84 @@ def deactivate_food(food_id: int):
 
 # ---------------- Food log ----------------
 def log_food(client_id, meal_type, food_name, calories, protein=0, carbs=0, fat=0,
-             servings=1.0, source="database", photo_path=None, ai_notes=None, log_date=None):
+             servings=1.0, source="database", photo_path=None, ai_notes=None,
+             log_date=None, entry_kind="extra", replaces_item_id=None):
     return execute(
         "INSERT INTO food_log (client_id, log_date, meal_type, food_name, servings, "
-        "calories, protein, carbs, fat, source, photo_path, ai_notes) "
-        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+        "calories, protein, carbs, fat, source, photo_path, ai_notes, "
+        "entry_kind, replaces_item_id) "
+        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         (client_id, log_date or TODAY(), meal_type, food_name, servings,
          round(calories, 1), round(protein, 1), round(carbs, 1), round(fat, 1),
-         source, photo_path, ai_notes))
+         source, photo_path, ai_notes, entry_kind, replaces_item_id))
+
+
+# ---------------- Plan-aware day calculation ----------------
+def todays_plan_items(client_id, log_date=None):
+    """Diet items scheduled for this weekday from the client's active plan."""
+    from services import plan_service as ps
+    plan = ps.active_diet(client_id)
+    if not plan:
+        return []
+    d = date.fromisoformat(log_date) if log_date else date.today()
+    day = ps.DAYS[d.weekday()]
+    if ps.plan_days(plan["id"]):
+        return ps.diet_items_for_day(plan["id"], day)
+    return ps.diet_items(plan["id"])
+
+
+def skipped_ids(client_id, log_date=None):
+    rows = query("SELECT diet_item_id FROM skipped_meals WHERE client_id=? AND log_date=?",
+                 (client_id, log_date or TODAY()))
+    return {r["diet_item_id"] for r in rows}
+
+
+def set_skipped(client_id, diet_item_id, skipped: bool, log_date=None):
+    d = log_date or TODAY()
+    if skipped:
+        try:
+            execute("INSERT INTO skipped_meals (client_id, log_date, diet_item_id) "
+                    "VALUES (?,?,?)", (client_id, d, diet_item_id))
+        except Exception:
+            pass  # already skipped
+    else:
+        execute("DELETE FROM skipped_meals WHERE client_id=? AND log_date=? "
+                "AND diet_item_id=?", (client_id, d, diet_item_id))
+
+
+def effective_day(client_id, log_date=None):
+    """The number that matters: plan-aware calories/protein for the day.
+
+    = planned meals (except skipped/replaced ones, which are assumed followed)
+      + logged replacements + logged extras.
+    """
+    d = log_date or TODAY()
+    items = todays_plan_items(client_id, d)
+    logs = day_log(client_id, d)
+    replaced = {r["replaces_item_id"] for r in logs
+                if (r.get("entry_kind") == "replacement") and r.get("replaces_item_id")}
+    skipped = skipped_ids(client_id, d)
+    plan_cal = plan_pro = 0.0
+    followed = []
+    for it in items:
+        if it["id"] in replaced or it["id"] in skipped:
+            continue
+        plan_cal += it["calories"] or 0
+        plan_pro += it["protein_g"] or 0
+        followed.append(it)
+    log_cal = sum(r["calories"] or 0 for r in logs)
+    log_pro = sum(r["protein"] or 0 for r in logs)
+    return {
+        "calories": plan_cal + log_cal,
+        "protein": plan_pro + log_pro,
+        "plan_calories": plan_cal,
+        "logged_calories": log_cal,
+        "followed_items": followed,
+        "replaced_ids": replaced,
+        "skipped_ids": skipped,
+        "plan_item_count": len(items),
+        "logs": logs,
+    }
 
 
 def delete_log(log_id: int, client_id: int):

@@ -37,14 +37,17 @@ def food_logs_page():
             day = c2.date_input("Date", date.today())
             cid = clients[sel]["id"]
 
+            eff = ns.effective_day(cid, day.isoformat())
             totals = ns.day_totals(cid, day.isoformat())
             targets = ns.plan_targets(cid)
             theme.kpi_grid([
-                theme.kpi_card("fa-fire", f"{totals['calories']:.0f}", "Calories"),
-                theme.kpi_card("fa-drumstick-bite", f"{totals['protein']:.0f} g", "Protein"),
-                theme.kpi_card("fa-bread-slice", f"{totals['carbs']:.0f} g", "Carbs"),
-                theme.kpi_card("fa-bottle-droplet", f"{totals['fat']:.0f} g", "Fat"),
+                theme.kpi_card("fa-fire", f"{eff['calories']:.0f}", "Intake (plan-aware)"),
+                theme.kpi_card("fa-drumstick-bite", f"{eff['protein']:.0f} g", "Protein"),
+                theme.kpi_card("fa-utensils", f"{eff['plan_calories']:.0f}", "From plan"),
+                theme.kpi_card("fa-plus", f"{eff['logged_calories']:.0f}", "Logged (extra/repl.)"),
             ])
+            st.caption("Plan meals count automatically unless the client marked them "
+                       "replaced/skipped — extras and replacements are what they logged.")
             if targets:
                 st.caption(f"🎯 Plan target: {targets['calories']:.0f} kcal · "
                            f"{targets['protein']:.0f}g protein")

@@ -189,6 +189,8 @@ CREATE TABLE IF NOT EXISTS food_log (
     carbs REAL DEFAULT 0,
     fat REAL DEFAULT 0,
     source TEXT DEFAULT 'database',    -- database / photo_ai / manual
+    entry_kind TEXT DEFAULT 'extra',   -- extra / replacement
+    replaces_item_id INTEGER,          -- diet_items.id when entry_kind='replacement'
     photo_path TEXT,
     ai_notes TEXT,
     created_at TEXT DEFAULT (datetime('now'))
@@ -216,4 +218,13 @@ CREATE TABLE IF NOT EXISTS activity_sync (
     avg_hr REAL,
     created_at TEXT DEFAULT (datetime('now')),
     UNIQUE(source, external_id)
+);
+
+-- ============ Plan adherence (plan-aware food logging) ============
+CREATE TABLE IF NOT EXISTS skipped_meals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    client_id INTEGER NOT NULL REFERENCES clients(id),
+    log_date TEXT NOT NULL,
+    diet_item_id INTEGER NOT NULL REFERENCES diet_items(id),
+    UNIQUE(client_id, log_date, diet_item_id)
 );

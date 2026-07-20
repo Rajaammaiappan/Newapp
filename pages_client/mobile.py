@@ -21,6 +21,18 @@ from utils.calculators import bmi, bmi_category
 from utils.chart_theme import style, PRIMARY, SECONDARY
 
 
+def _maintenance(me):
+    try:
+        from utils.calculators import bmr as _bmr, tdee as _tdee
+        if me.get("current_weight_kg") and me.get("height_cm") and me.get("age"):
+            return _tdee(_bmr(me["current_weight_kg"], me["height_cm"], me["age"],
+                              me.get("gender") or "Male"),
+                         me.get("activity_level") or "moderate")
+    except Exception:
+        pass
+    return None
+
+
 def render():
     cid = st.session_state.client_id
     me = get_client(cid)
@@ -73,6 +85,23 @@ def _home(cid, me):
                        f"{bmi_v:.1f}" if bmi_v else "—",
                        f"BMI · {bmi_category(bmi_v)}" if bmi_v else "BMI"),
     ])
+
+    # ---- Maintenance & today's deficit (always visible) ----
+    maint = _maintenance(me)
+    if maint:
+        eff = ns.effective_day(cid)
+        burned = ss.activity_summary(cid, 1)["kcal"]
+        deficit = maint + burned - eff["calories"]
+        theme.kpi_grid([
+            theme.kpi_card("fa-scale-balanced", f"{maint}", "Maintenance kcal"),
+            theme.kpi_card("fa-utensils", f"{eff['calories']:.0f}", "Today's Intake"),
+            theme.kpi_card("fa-person-running", f"{burned:.0f}", "Burned"),
+            theme.kpi_card("fa-arrow-trend-down" if deficit >= 0 else "fa-arrow-trend-up",
+                           f"{deficit:+.0f}",
+                           "Deficit 🔥" if deficit >= 0 else "Surplus"),
+        ])
+        st.caption("💡 Intake counts your diet plan automatically — only update Track "
+                   "when you eat something different or extra.")
 
     # ---- Today's diet (day-wise) ----
     st.markdown("#### 🍽️ Today's Diet Plan")
@@ -132,26 +161,76 @@ def _home(cid, me):
 
 # ==================================================================== TRACK
 def _track(cid, me):
-    totals = ns.day_totals(cid)
+    eff = ns.effective_day(cid)
     plan_t = ns.plan_targets(cid)
     t_cal = me.get("daily_calorie_target") or (plan_t and plan_t["calories"]) or None
     t_pro = me.get("daily_protein_target") or (plan_t and plan_t["protein"]) or None
 
     theme.kpi_grid([
-        theme.kpi_card("fa-fire", f"{totals['calories']:.0f}",
-                       f"Eaten{f' / {t_cal:.0f}' if t_cal else ''} kcal"),
-        theme.kpi_card("fa-drumstick-bite", f"{totals['protein']:.0f} g",
+        theme.kpi_card("fa-fire", f"{eff['calories']:.0f}",
+                       f"Intake{f' / {t_cal:.0f}' if t_cal else ''} kcal"),
+        theme.kpi_card("fa-drumstick-bite", f"{eff['protein']:.0f} g",
                        f"Protein{f' / {t_pro:.0f}g' if t_pro else ''}"),
     ])
     if t_cal:
-        theme.progress_bar(min(100, totals["calories"] / t_cal * 100))
-        left = t_cal - totals["calories"]
+        theme.progress_bar(min(100, eff["calories"] / t_cal * 100))
+        left = t_cal - eff["calories"]
         st.caption(f"🎯 {left:.0f} kcal left today" if left > 0
                    else f"⚠️ {-left:.0f} kcal over target")
+    if eff["plan_calories"]:
+        st.caption(f"🍽️ Counted automatically from your plan: "
+                   f"**{eff['plan_calories']:.0f} kcal** · logged by you: "
+                   f"**{eff['logged_calories']:.0f} kcal**")
 
-    # ---- Add food ----
-    st.markdown("#### ➕ Add Food")
-    search = st.text_input("🔍 Search", placeholder="dosa, idli, rice, egg...")
+    # ---------------- Today's plan meals with status ----------------
+    plan_items = ns.todays_plan_items(cid)
+    if plan_items:
+        st.markdown("#### 🍽️ Today's Plan — following it? Do nothing! 😎")
+        st.caption("Only tap if something changed: 🔄 ate something else · ⏭ skipped it")
+        for it in plan_items:
+            replaced = it["id"] in eff["replaced_ids"]
+            skipped = it["id"] in eff["skipped_ids"]
+            status = ("🔄 Replaced" if replaced else
+                      "⏭ Skipped" if skipped else "✅ Following")
+            c1, c2, c3 = st.columns([4, 1, 1])
+            c1.markdown(f"**{it['meal_name']}**"
+                        f"{' · ' + it['meal_time'] if it.get('meal_time') else ''} — "
+                        f"{it['food_items']}  \n"
+                        f"<small style='color:#9aa4b2'>{it['calories'] or 0} kcal · "
+                        f"{status}</small>", unsafe_allow_html=True)
+            if not replaced:
+                if c2.button("🔄", key=f"rep{it['id']}",
+                             help=f"I ate something else instead of {it['meal_name']}"):
+                    st.session_state["replace_target"] = it["id"]
+                    st.session_state["replace_name"] = it["meal_name"]
+                    st.rerun()
+                if skipped:
+                    if c3.button("↩️", key=f"unskip{it['id']}", help="Undo skip"):
+                        ns.set_skipped(cid, it["id"], False)
+                        st.rerun()
+                else:
+                    if c3.button("⏭", key=f"skip{it['id']}",
+                                 help=f"I skipped {it['meal_name']} (didn't eat)"):
+                        ns.set_skipped(cid, it["id"], True)
+                        st.rerun()
+        st.divider()
+
+    # ---------------- Add food (extra / replacement) ----------------
+    rep_target = st.session_state.get("replace_target")
+    rep_name = st.session_state.get("replace_name")
+    if rep_target:
+        st.markdown(f"#### 🔄 What did you eat instead of **{rep_name}**?")
+        if st.button("✖ Cancel — I followed the plan after all"):
+            st.session_state.pop("replace_target", None)
+            st.session_state.pop("replace_name", None)
+            st.rerun()
+        entry_kind, replaces_id, default_meal = "replacement", rep_target, rep_name
+    else:
+        st.markdown("#### ➕ Ate something extra? Add it")
+        st.caption("Snacks, sweets, an extra chapati — log only what's outside the plan.")
+        entry_kind, replaces_id, default_meal = "extra", None, None
+
+    search = st.text_input("🔍 Search", placeholder="dosa, samosa, tea, biscuits...")
     foods = ns.search_foods(search) if search else None
     if foods is not None and not foods:
         st.caption("Not found — use AI photo below or ask coach to add it.")
@@ -165,17 +244,29 @@ def _track(cid, me):
         food = foods[idx]
         c1, c2, c3 = st.columns([1, 1.2, 1.4])
         servings = c1.number_input("Servings", 0.25, 10.0, 1.0, 0.25)
-        meal = c2.selectbox("Meal", ns.MEAL_TYPES)
-        if c3.button("Add ✓", type="primary", use_container_width=True):
+        meal_opts = ns.MEAL_TYPES
+        meal_idx = 0
+        if default_meal:
+            for i, m in enumerate(meal_opts):
+                if m.lower() in (default_meal or "").lower():
+                    meal_idx = i
+                    break
+        meal = c2.selectbox("Meal", meal_opts, index=meal_idx)
+        btn_label = "Replace ✓" if rep_target else "Add extra ✓"
+        if c3.button(btn_label, type="primary", use_container_width=True):
             ns.log_food(cid, meal, f"{food['name']} ({food['serving']} × {servings:g})",
                         food["calories"] * servings, food["protein"] * servings,
                         food["carbs"] * servings, food["fat"] * servings,
-                        servings, source="database")
-            st.toast(f"Added {food['name']} ✓")
+                        servings, source="database",
+                        entry_kind=entry_kind, replaces_item_id=replaces_id)
+            st.session_state.pop("replace_target", None)
+            st.session_state.pop("replace_name", None)
+            st.toast(("Replaced with " if rep_target else "Added ") + food["name"] + " ✓")
             st.rerun()
 
-    # ---- AI photo ----
-    with st.expander("📸 Scan meal photo with AI"):
+    # ---- AI photo (also respects replace mode) ----
+    with st.expander("📸 Or scan the food photo with AI",
+                     expanded=bool(rep_target)):
         if not ns.ai_available():
             st.caption("Coach needs to enable the free AI key. Use search above meanwhile.")
         else:
@@ -202,25 +293,31 @@ def _track(cid, me):
                                 f"{tot.get('protein',0):.0f}g protein**")
                     m1, m2 = st.columns(2)
                     meal2 = m1.selectbox("Meal ", ns.MEAL_TYPES, key="ai_meal")
-                    if m2.button("💾 Save", use_container_width=True):
+                    save_label = "💾 Save as replacement" if rep_target else "💾 Save as extra"
+                    if m2.button(save_label, use_container_width=True):
                         names = " + ".join(i["name"] for i in res["items"])
                         photo_path = ns.save_food_photo(cid, up) if up else None
                         ns.log_food(cid, meal2, names, tot.get("calories") or 0,
                                     tot.get("protein") or 0, tot.get("carbs") or 0,
                                     tot.get("fat") or 0, 1, source="photo_ai",
-                                    photo_path=photo_path, ai_notes=res.get("notes"))
+                                    photo_path=photo_path, ai_notes=res.get("notes"),
+                                    entry_kind=entry_kind, replaces_item_id=replaces_id)
                         st.session_state.pop("ai_res", None)
+                        st.session_state.pop("replace_target", None)
+                        st.session_state.pop("replace_name", None)
                         st.toast("Saved ✓")
                         st.rerun()
 
-    # ---- Today's log ----
-    rows = ns.day_log(cid)
+    # ---- Today's logged entries ----
+    rows = eff["logs"]
     if rows:
-        with st.expander(f"📋 Today's food ({len(rows)} items)", expanded=False):
+        with st.expander(f"📋 Logged today ({len(rows)} items)", expanded=False):
             for r in rows:
+                kind = "🔄 replaced a meal" if r.get("entry_kind") == "replacement" else "➕ extra"
                 c1, c2 = st.columns([6, 1])
                 c1.markdown(f"**{r['meal_type']}** · {r['food_name']} — "
-                            f"{r['calories']:.0f} kcal · {r['protein']:.0f}g P")
+                            f"{r['calories']:.0f} kcal <small style='color:#9aa4b2'>"
+                            f"({kind})</small>", unsafe_allow_html=True)
                 if c2.button("🗑", key=f"dfl{r['id']}"):
                     ns.delete_log(r["id"], cid)
                     st.rerun()
@@ -289,16 +386,8 @@ def _track(cid, me):
 
     # ---- Day-end summary ----
     st.markdown("#### 🌙 Day-End Summary")
-    eaten = totals["calories"]
-    maint = None
-    try:
-        from utils.calculators import bmr as _bmr, tdee as _tdee
-        if me.get("current_weight_kg") and me.get("height_cm") and me.get("age"):
-            maint = _tdee(_bmr(me["current_weight_kg"], me["height_cm"], me["age"],
-                               me.get("gender") or "Male"),
-                          me.get("activity_level") or "moderate")
-    except Exception:
-        pass
+    eaten = ns.effective_day(cid)["calories"]
+    maint = _maintenance(me)
     theme.kpi_grid([
         theme.kpi_card("fa-utensils", f"{eaten:.0f}", "Eaten"),
         theme.kpi_card("fa-fire-flame-curved", f"{burned:.0f}", "Burned"),

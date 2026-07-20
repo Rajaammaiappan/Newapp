@@ -23,8 +23,9 @@ def diet_items(plan_id: int):
 def create_diet_plan(name: str, client_id=None, is_template=False) -> int:
     if client_id and not is_template:
         execute("UPDATE diet_plans SET active = 0 WHERE client_id = ?", (client_id,))
-    return execute("INSERT INTO diet_plans (client_id, name, is_template) VALUES (?,?,?)",
-                   (client_id, name, 1 if is_template else 0))
+    return execute(
+        "INSERT INTO diet_plans (client_id, name, is_template, active) VALUES (?,?,?,1)",
+        (client_id, name, 1 if is_template else 0))
 
 
 def add_diet_item(plan_id, meal_number, meal_name, meal_time, food_items,
@@ -148,8 +149,9 @@ def plan_exercises(plan_id: int):
 def create_workout_plan(name: str, client_id=None, is_template=False) -> int:
     if client_id and not is_template:
         execute("UPDATE workout_plans SET active = 0 WHERE client_id = ?", (client_id,))
-    return execute("INSERT INTO workout_plans (client_id, name, is_template) VALUES (?,?,?)",
-                   (client_id, name, 1 if is_template else 0))
+    return execute(
+        "INSERT INTO workout_plans (client_id, name, is_template, active) VALUES (?,?,?,1)",
+        (client_id, name, 1 if is_template else 0))
 
 
 def add_exercise(plan_id, day_label, name, sets, reps, rest_seconds, weight,

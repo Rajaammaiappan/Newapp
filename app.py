@@ -112,20 +112,43 @@ def main():
     if not is_authenticated():
         login_page()
         return
-    page = render_sidebar()
-    if not st.session_state.get("_menu_hint_shown"):
-        st.session_state["_menu_hint_shown"] = True
-        st.toast("📱 Tip: tap the purple **Menu** button (top-left) to navigate", icon="👆")
     try:
         if st.session_state.role == "coach":
+            page = render_sidebar()
             coach_router(page)
         else:
             if not st.session_state.get("client_id"):
                 st.error("No client profile linked to this account. Contact your coach.")
                 return
-            client_router(page)
+            # Clients: simple mobile-first 3-tab UI, no sidebar at all
+            st.markdown("""<style>
+              [data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"],
+              [data-testid="collapsedControl"] { display: none !important; }
+              .block-container { padding-top: 1.2rem !important; }
+              /* big app-like main tabs */
+              .stTabs [data-baseweb="tab-list"] {
+                gap: 6px; position: sticky; top: 0; z-index: 999;
+                background: #0e1117; padding: 6px 0 2px 0;
+              }
+              .stTabs [data-baseweb="tab"] {
+                flex: 1; justify-content: center;
+                font-size: 1rem !important; font-weight: 700;
+                min-height: 48px; border-radius: 12px 12px 0 0;
+              }
+              .stTabs [aria-selected="true"] {
+                background: rgba(108,92,231,.18) !important;
+              }
+            </style>""", unsafe_allow_html=True)
+            from pages_client import mobile
+            mobile.render()
     except Exception as exc:
-        st.error("Something went wrong loading this page. Please try again.")
+        st.error(f"Something went wrong loading this page: **{type(exc).__name__}: "
+                 f"{str(exc)[:300]}**")
+        if "no such column" in str(exc).lower():
+            st.warning("🔧 This looks like a database column missing after an app "
+                       "update. Fix: reboot the app once (Manage app → Reboot). "
+                       "If it persists, run the ALTER statements from "
+                       "`sql/fix_columns.sql` in your Turso SQL console.")
         import logging
         logging.exception(exc)
 

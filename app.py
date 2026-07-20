@@ -113,6 +113,9 @@ def main():
         login_page()
         return
     page = render_sidebar()
+    if not st.session_state.get("_menu_hint_shown"):
+        st.session_state["_menu_hint_shown"] = True
+        st.toast("📱 Tip: tap the purple **Menu** button (top-left) to navigate", icon="👆")
     try:
         if st.session_state.role == "coach":
             coach_router(page)

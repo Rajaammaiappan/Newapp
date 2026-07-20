@@ -171,11 +171,69 @@ section[data-testid="stSidebar"] { background: #12161f; border-right: 1px solid 
 /* ---------- Tables ---------- */
 .stDataFrame { border-radius: var(--radius); overflow: hidden; }
 
+/* ---------- Big visible MENU button (all screens, crucial on mobile) ---------- */
+[data-testid="stSidebarCollapsedControl"],
+[data-testid="collapsedControl"] {
+  background: linear-gradient(135deg, #6c5ce7, #00cec9) !important;
+  border-radius: 12px !important;
+  padding: 8px 14px 8px 10px !important;
+  box-shadow: 0 4px 14px rgba(108,92,231,.45) !important;
+  top: 8px !important; left: 8px !important;
+  z-index: 999999 !important;
+  display: flex !important; align-items: center !important;
+  transition: transform .15s ease;
+}
+[data-testid="stSidebarCollapsedControl"]:hover,
+[data-testid="collapsedControl"]:hover { transform: scale(1.05); }
+[data-testid="stSidebarCollapsedControl"] svg,
+[data-testid="collapsedControl"] svg,
+[data-testid="stSidebarCollapsedControl"] img,
+[data-testid="collapsedControl"] img {
+  color: #fff !important; fill: #fff !important;
+  width: 22px !important; height: 22px !important;
+}
+[data-testid="stSidebarCollapsedControl"]::after,
+[data-testid="collapsedControl"]::after {
+  content: "Menu";
+  color: #fff; font-weight: 700; font-size: .9rem;
+  margin-left: 6px; letter-spacing: .3px;
+  font-family: 'Inter', sans-serif;
+}
+/* keep the sidebar-close (X / arrow) easy to tap */
+[data-testid="stSidebar"] [data-testid="stSidebarCollapseButton"] button,
+[data-testid="stSidebar"] button[kind="header"] {
+  min-width: 44px; min-height: 44px;
+}
+
 /* ---------- Mobile ---------- */
-@media (max-width: 640px) {
-  .block-container { padding-left: .8rem; padding-right: .8rem; }
+@media (max-width: 768px) {
+  .block-container {
+    padding-left: .8rem; padding-right: .8rem;
+    padding-top: 3.4rem;               /* room for the Menu button */
+  }
   .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-  .kpi-value { font-size: 1.35rem; }
-  .stButton > button { width: 100%; min-height: 44px; }
+  .kpi-value { font-size: 1.3rem; }
+  .kpi-card { padding: 14px 12px; }
+  .stButton > button { width: 100%; min-height: 46px; font-size: .95rem; }
   .bubble { max-width: 88%; }
+  h1 { font-size: 1.5rem; } h2 { font-size: 1.25rem; } h3 { font-size: 1.05rem; }
+  .meal-card { padding: 12px; }
+  .macro-chips { flex-wrap: wrap; }
+  .chip { font-size: .72rem; padding: 4px 8px; }
+  /* sidebar becomes a full-width overlay drawer on phones */
+  [data-testid="stSidebar"] {
+    min-width: 82vw !important; max-width: 86vw !important;
+    box-shadow: 8px 0 30px rgba(0,0,0,.55);
+  }
+  [data-testid="stSidebar"] .nav-link { min-height: 44px; }
+  /* larger touch targets in radios/selects */
+  .stRadio label, .stSelectbox label, .stNumberInput label { font-size: .9rem; }
+  .stTabs [data-baseweb="tab"] { padding: 8px 10px; font-size: .85rem; }
+  .login-card { padding: 26px 20px; }
+  /* tables scroll instead of squeeze */
+  .stDataFrame { font-size: .8rem; }
+}
+@media (max-width: 400px) {
+  .kpi-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .kpi-value { font-size: 1.15rem; }
 }

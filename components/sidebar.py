@@ -31,8 +31,20 @@ def render() -> str:
     app_name = get_setting("app_name", "FitCoach")
 
     with st.sidebar:
+        import base64 as _b64
+        from pathlib import Path as _P
+        logo_el = '<div class="logo"><i class="fa-solid fa-bolt"></i></div>'
+        try:
+            _ip = _P("assets/brand/fitcoach_icon.png")
+            if _ip.exists():
+                _b = _b64.b64encode(_ip.read_bytes()).decode()
+                logo_el = (f'<img src="data:image/png;base64,{_b}" '
+                           'style="width:42px;height:42px;border-radius:11px;" '
+                           'alt="logo"/>')
+        except Exception:
+            pass
         st.markdown(f"""<div class="sidebar-brand">
-            <div class="logo"><i class="fa-solid fa-bolt"></i></div>
+            {logo_el}
             <div><div class="name">{app_name}</div>
             <div style="font-size:.7rem;color:#9aa4b2;">Hi, {st.session_state.get('name','')}</div></div>
         </div>""", unsafe_allow_html=True)

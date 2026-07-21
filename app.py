@@ -6,7 +6,13 @@ First time:   python -m database.seed
 """
 import streamlit as st
 
-st.set_page_config(page_title="FitCoach", page_icon="⚡", layout="wide",
+_ICON = "assets/brand/fitcoach_icon.png"
+try:
+    from PIL import Image as _Img
+    _icon_img = _Img.open(_ICON)
+except Exception:
+    _icon_img = "⚡"
+st.set_page_config(page_title="FitCoach", page_icon=_icon_img, layout="wide",
                    initial_sidebar_state="expanded")
 
 from components import theme
@@ -44,10 +50,22 @@ def login_page():
     st.markdown('<div class="login-bg"></div>', unsafe_allow_html=True)
     _, mid, _ = st.columns([1, 1.1, 1])
     with mid:
-        st.markdown("""
+        # brand logo (falls back to bolt icon if file missing)
+        import base64 as _b64
+        from pathlib import Path as _P
+        logo_html = '<div class="login-logo"><i class="fa-solid fa-bolt"></i></div>'
+        try:
+            _lp = _P("assets/brand/fitcoach_logo_dark.png")
+            if _lp.exists():
+                _b = _b64.b64encode(_lp.read_bytes()).decode()
+                logo_html = (f'<img src="data:image/png;base64,{_b}" '
+                             'style="width:240px;max-width:80%;display:block;'
+                             'margin:0 auto 6px auto;" alt="FitCoach"/>')
+        except Exception:
+            pass
+        st.markdown(f"""
         <div class="login-card">
-          <div class="login-logo"><i class="fa-solid fa-bolt"></i></div>
-          <div class="login-title">FitCoach</div>
+          {logo_html}
           <div class="login-sub">Your transformation starts here</div>
         </div>""", unsafe_allow_html=True)
         with st.form("login"):

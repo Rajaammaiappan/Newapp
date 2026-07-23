@@ -1,5 +1,6 @@
 """Authentication: bcrypt password hashing, login, session guards."""
 import datetime
+from utils import timez as _tz
 import bcrypt
 import streamlit as st
 from database.connection import query, execute
@@ -19,8 +20,8 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 
 def log_activity(user_id, action, details=""):
-    execute("INSERT INTO activity_logs (user_id, action, details) VALUES (?,?,?)",
-            (user_id, action, details))
+    execute("INSERT INTO activity_logs (user_id, action, details, created_at) VALUES (?,?,?,?)",
+            (user_id, action, details, _tz.db_now()))
 
 
 def login(username: str, password: str):

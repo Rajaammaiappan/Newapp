@@ -1,5 +1,6 @@
 """Messages, notifications, files, calendar events, subscriptions, settings."""
 import base64
+from utils import timez as _tz
 from pathlib import Path
 from database.connection import query, execute
 
@@ -11,8 +12,8 @@ MAX_MB = 10
 # ---- Messages ----
 
 def send_message(sender_id, receiver_id, body):
-    execute("INSERT INTO messages (sender_id, receiver_id, body) VALUES (?,?,?)",
-            (sender_id, receiver_id, body.strip()))
+    execute("INSERT INTO messages (sender_id, receiver_id, body, sent_at) VALUES (?,?,?,?)",
+            (sender_id, receiver_id, body.strip(), _tz.db_now()))
 
 
 def conversation(user_a, user_b):
@@ -36,8 +37,8 @@ def unread_count(user_id, from_user=None):
 # ---- Notifications ----
 
 def notify(user_id, title, body="", ntype="general"):
-    execute("INSERT INTO notifications (user_id, title, body, type) VALUES (?,?,?,?)",
-            (user_id, title, body, ntype))
+    execute("INSERT INTO notifications (user_id, title, body, type, created_at) VALUES (?,?,?,?,?)",
+            (user_id, title, body, ntype, _tz.db_now()))
 
 
 def notifications_for(user_id, limit=30):

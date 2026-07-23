@@ -2,6 +2,7 @@
 from datetime import date, timedelta
 
 from database.connection import query, execute
+from utils import timez as _tz
 from utils.calculators import recommend_targets
 from utils.timez import today as _ltoday
 
@@ -108,5 +109,5 @@ def _notify_once(user_id: int, topic: str, title: str, body: str):
         (user_id, topic, week_ago))
     if dupe:
         return
-    execute("INSERT INTO notifications (user_id, title, body, type) VALUES (?,?,?,?)",
-            (user_id, title, body, topic))
+    execute("INSERT INTO notifications (user_id, title, body, type, created_at) VALUES (?,?,?,?,?)",
+            (user_id, title, body, topic, _tz.db_now()))

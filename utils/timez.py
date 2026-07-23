@@ -52,6 +52,13 @@ def _parse(ts):
     if not ts:
         return None
     s = str(ts).strip().replace("T", " ")
+    # 1) values written by this app carry an explicit offset -> exact
+    for fmt in ("%Y-%m-%d %H:%M:%S%z", "%Y-%m-%d %H:%M%z"):
+        try:
+            return datetime.strptime(s, fmt)
+        except ValueError:
+            continue
+    # 2) legacy rows (SQL datetime('now')) are UTC
     for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d"):
         try:
             dt = datetime.strptime(s[:19], fmt)
@@ -86,3 +93,14 @@ def nice(ts):
     if d == today() - timedelta(days=1):
         return f"Yesterday {t}"
     return local.strftime("%d %b, ") + t
+
+
+def db_now():
+    """Timestamp string to STORE in the database, in local time with an explicit
+    UTC offset (e.g. '2026-07-23 21:06:12+0530').
+
+    Storing the offset makes the value unambiguous: any screen that prints the
+    raw string already shows local time, and to_local()/nice() parse the offset
+    instead of assuming UTC.
+    """
+    return now().strftime("%Y-%m-%d %H:%M:%S%z")

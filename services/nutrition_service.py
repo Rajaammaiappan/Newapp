@@ -285,3 +285,9 @@ def save_food_photo(client_id: int, uploaded_file) -> str | None:
         return str(path.relative_to(UPLOAD_DIR.parent.parent.parent))
     except Exception:
         return None
+
+
+def all_foods():
+    """Every active food, grouped by category order — for the one big dropdown."""
+    return query("SELECT * FROM food_database WHERE is_active=1 "
+                 "ORDER BY category, name")

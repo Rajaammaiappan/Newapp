@@ -324,3 +324,82 @@ section[data-testid="stSidebar"] { background: #12161f; border-right: 1px solid 
   .kpi-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
   .kpi-value { font-size: 1.15rem; }
 }
+
+/* ========== HARD OVERRIDES v2 — beat light system mode everywhere ========== */
+/* Secondary / icon buttons (🔄 ⏭ etc.) — never white */
+.stApp .stButton > button,
+.stApp button[kind="secondary"],
+.stApp [data-testid="baseButton-secondary"] {
+  background-color: #1a1f2b !important;
+  color: #e8ecf3 !important;
+  border: 1px solid rgba(255,255,255,.16) !important;
+}
+.stApp .stButton > button:hover { border-color: #6c5ce7 !important; }
+.stApp .stButton > button p, .stApp .stButton > button span,
+.stApp .stButton > button div { color: #e8ecf3 !important; }
+/* primary stays gradient */
+.stApp .stButton > button[kind="primary"],
+.stApp [data-testid="baseButton-primary"],
+.stApp .stFormSubmitButton > button {
+  background: linear-gradient(135deg, #6c5ce7, #00cec9) !important;
+  color: #ffffff !important; border: none !important;
+}
+.stApp .stFormSubmitButton > button * ,
+.stApp .stButton > button[kind="primary"] * { color:#fff !important; }
+
+/* Selectbox: value, placeholder, typed text — always bright */
+.stApp div[data-baseweb="select"] > div {
+  background-color: #1a1f2b !important;
+  border-color: rgba(255,255,255,.16) !important;
+}
+.stApp div[data-baseweb="select"] span,
+.stApp div[data-baseweb="select"] div,
+.stApp div[data-baseweb="select"] input {
+  color: #f5f6fa !important;
+  -webkit-text-fill-color: #f5f6fa !important;
+}
+.stApp div[data-baseweb="select"] [aria-disabled="true"],
+.stApp div[data-baseweb="select"] [data-baseweb="typo-placeholder"] {
+  color: #8b94a6 !important; -webkit-text-fill-color: #8b94a6 !important;
+}
+/* dropdown popup list */
+div[data-baseweb="popover"] li, div[data-baseweb="popover"] [role="option"],
+div[data-baseweb="popover"] div {
+  color: #f5f6fa !important;
+}
+div[data-baseweb="popover"] > div, ul[role="listbox"] {
+  background-color: #171c28 !important;
+}
+ul[role="listbox"] li:hover,
+ul[role="listbox"] [aria-selected="true"] {
+  background-color: rgba(108,92,231,.3) !important;
+}
+
+/* number input +/- steppers */
+.stApp [data-testid="stNumberInput"] button {
+  background-color: #232a3a !important; color: #e8ecf3 !important;
+  border-color: rgba(255,255,255,.14) !important;
+}
+.stApp [data-testid="stNumberInput"] button svg { fill:#e8ecf3 !important; }
+
+/* text inputs — bright typed text in any mode */
+.stApp input, .stApp textarea {
+  color: #f5f6fa !important;
+  -webkit-text-fill-color: #f5f6fa !important;
+  background-color: #1a1f2b !important;
+}
+.stApp input::placeholder, .stApp textarea::placeholder {
+  color: #8b94a6 !important; -webkit-text-fill-color: #8b94a6 !important;
+}
+/* date picker calendar */
+div[data-baseweb="calendar"], div[data-baseweb="datepicker"] {
+  background-color: #171c28 !important; color:#f5f6fa !important;
+}
+div[data-baseweb="calendar"] * { color:#e8ecf3 !important; }
+/* expander header */
+.stApp [data-testid="stExpander"] summary {
+  background-color: #141926 !important;
+}
+.stApp [data-testid="stExpander"] summary:hover { color:#fff !important; }
+/* toggle/checkbox text */
+.stApp [data-testid="stWidgetLabel"] p { color:#e8ecf3 !important; }

@@ -230,18 +230,20 @@ def _track(cid, me):
         st.caption("Snacks, sweets, an extra chapati — log only what's outside the plan.")
         entry_kind, replaces_id, default_meal = "extra", None, None
 
-    search = st.text_input("🔍 Search", placeholder="dosa, samosa, tea, biscuits...")
-    foods = ns.search_foods(search) if search else None
-    if foods is not None and not foods:
-        st.caption("Not found — use AI photo below or ask coach to add it.")
-    if not foods:
-        cat = st.selectbox("Category", ns.food_categories())
-        foods = ns.foods_in_category(cat)
-    if foods:
-        labels = [f"{f['name']} · {f['serving']} · {f['calories']:.0f} kcal" for f in foods]
-        idx = st.selectbox("Food", range(len(foods)), format_func=lambda i: labels[i],
-                           label_visibility="collapsed")
-        food = foods[idx]
+    foods = ns.all_foods()
+    labels = [f"{f['name']}  ·  {f['serving']}  ·  {f['calories']:.0f} kcal  ({f['category']})"
+              for f in foods]
+    st.caption("👇 Tap the box and **type to search** — dosa, samosa, tea, egg...")
+    sel = st.selectbox("Food", range(len(foods)),
+                       format_func=lambda i: labels[i],
+                       index=None,
+                       placeholder="🔍 All foods — tap & type to filter...",
+                       label_visibility="collapsed",
+                       key="food_pick")
+    if sel is not None:
+        food = foods[sel]
+        st.markdown(f"**{food['name']}** · {food['serving']} — "
+                    f"{food['calories']:.0f} kcal · {food['protein']:.0f}g protein")
         c1, c2, c3 = st.columns([1, 1.2, 1.4])
         servings = c1.number_input("Servings", 0.25, 10.0, 1.0, 0.25)
         meal_opts = ns.MEAL_TYPES
@@ -261,8 +263,12 @@ def _track(cid, me):
                         entry_kind=entry_kind, replaces_item_id=replaces_id)
             st.session_state.pop("replace_target", None)
             st.session_state.pop("replace_name", None)
+            st.session_state.pop("food_pick", None)
             st.toast(("Replaced with " if rep_target else "Added ") + food["name"] + " ✓")
             st.rerun()
+    else:
+        st.caption("Food not in the list? Use the AI photo scan below or ask "
+                   "your coach to add it.")
 
     # ---- AI photo (also respects replace mode) ----
     with st.expander("📸 Or scan the food photo with AI",

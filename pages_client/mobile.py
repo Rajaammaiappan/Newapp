@@ -37,11 +37,11 @@ def render():
     cid = st.session_state.client_id
     me = get_client(cid)
 
-    top1, top2 = st.columns([5, 1])
+    top1, top2 = st.columns([3.4, 1])
     h = datetime.datetime.now().hour
     greet = "Good Morning" if h < 12 else "Good Afternoon" if h < 17 else "Good Evening"
     top1.markdown(f"### {greet}, {me['full_name'].split()[0]} 💪")
-    if top2.button("🚪", help="Logout"):
+    if top2.button("🚪 Exit", help="Logout"):
         auth.logout()
         st.rerun()
 
@@ -186,33 +186,37 @@ def _track(cid, me):
     plan_items = ns.todays_plan_items(cid)
     if plan_items:
         st.markdown("#### 🍽️ Today's Plan — following it? Do nothing! 😎")
-        st.caption("Only tap if something changed: 🔄 ate something else · ⏭ skipped it")
+        st.caption("Only tap a button if something changed — otherwise it's all "
+                   "counted as followed.")
         for it in plan_items:
             replaced = it["id"] in eff["replaced_ids"]
             skipped = it["id"] in eff["skipped_ids"]
-            status = ("🔄 Replaced" if replaced else
-                      "⏭ Skipped" if skipped else "✅ Following")
-            c1, c2, c3 = st.columns([4, 1, 1])
-            c1.markdown(f"**{it['meal_name']}**"
+            status = ("🔄 Replaced — you logged something else" if replaced else
+                      "⏭ Skipped — not counted today" if skipped else
+                      "✅ Following the plan")
+            st.markdown(f"**{it['meal_name']}**"
                         f"{' · ' + it['meal_time'] if it.get('meal_time') else ''} — "
                         f"{it['food_items']}  \n"
                         f"<small style='color:#9aa4b2'>{it['calories'] or 0} kcal · "
                         f"{status}</small>", unsafe_allow_html=True)
             if not replaced:
-                if c2.button("🔄", key=f"rep{it['id']}",
-                             help=f"I ate something else instead of {it['meal_name']}"):
+                b1, b2 = st.columns(2)
+                if b1.button("🔄 Ate different", key=f"rep{it['id']}",
+                             use_container_width=True):
                     st.session_state["replace_target"] = it["id"]
                     st.session_state["replace_name"] = it["meal_name"]
                     st.rerun()
                 if skipped:
-                    if c3.button("↩️", key=f"unskip{it['id']}", help="Undo skip"):
+                    if b2.button("↩️ Undo skip", key=f"unskip{it['id']}",
+                                 use_container_width=True):
                         ns.set_skipped(cid, it["id"], False)
                         st.rerun()
                 else:
-                    if c3.button("⏭", key=f"skip{it['id']}",
-                                 help=f"I skipped {it['meal_name']} (didn't eat)"):
+                    if b2.button("⏭ Skipped it", key=f"skip{it['id']}",
+                                 use_container_width=True):
                         ns.set_skipped(cid, it["id"], True)
                         st.rerun()
+            st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
         st.divider()
 
     # ---------------- Add food (extra / replacement) ----------------
@@ -320,11 +324,11 @@ def _track(cid, me):
         with st.expander(f"📋 Logged today ({len(rows)} items)", expanded=False):
             for r in rows:
                 kind = "🔄 replaced a meal" if r.get("entry_kind") == "replacement" else "➕ extra"
-                c1, c2 = st.columns([6, 1])
+                c1, c2 = st.columns([3.6, 1])
                 c1.markdown(f"**{r['meal_type']}** · {r['food_name']} — "
                             f"{r['calories']:.0f} kcal <small style='color:#9aa4b2'>"
                             f"({kind})</small>", unsafe_allow_html=True)
-                if c2.button("🗑", key=f"dfl{r['id']}"):
+                if c2.button("🗑 Remove", key=f"dfl{r['id']}"):
                     ns.delete_log(r["id"], cid)
                     st.rerun()
 
@@ -336,12 +340,12 @@ def _track(cid, me):
     today_ml = ts.water_today(cid)
     theme.progress_bar(min(100, today_ml / goal * 100))
     st.caption(f"{today_ml} / {goal} ml")
-    w1, w2, w3, w4 = st.columns(4)
+    w1, w2, w3, w4 = st.columns([1, 1, 1, 1.25])
     for col, amt in zip((w1, w2, w3), (250, 500, 750)):
         if col.button(f"+{amt}", key=f"w{amt}", use_container_width=True):
             ts.add_water(cid, amt)
             st.rerun()
-    if w4.button("↩️", key="wundo", help="Undo last", use_container_width=True):
+    if w4.button("↩️ Undo", key="wundo", use_container_width=True):
         ts.undo_last_water(cid)
         st.rerun()
 

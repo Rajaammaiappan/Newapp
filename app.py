@@ -46,6 +46,36 @@ def ensure_db():
     return True
 
 
+DEV_SITE = "https://formula2solution-1.onrender.com/"
+
+DEV_CREDIT = f"""
+<div style="text-align:center;margin-top:26px;padding-top:16px;
+            border-top:1px solid rgba(255,255,255,.08);">
+  <div style="font-size:.72rem;letter-spacing:.14em;color:#7c8698;
+              text-transform:uppercase;margin-bottom:6px;">Developed by</div>
+  <a href="{DEV_SITE}" target="_blank" style="text-decoration:none;">
+    <span style="font-size:1.02rem;font-weight:700;
+      background:linear-gradient(135deg,#6c5ce7,#00cec9);
+      -webkit-background-clip:text;background-clip:text;
+      -webkit-text-fill-color:transparent;">Formula2Solutions</span>
+  </a>
+  <div style="margin-top:4px;">
+    <a href="{DEV_SITE}" target="_blank"
+       style="font-size:.76rem;color:#9aa4b2;text-decoration:none;">
+      🌐 formula2solution-1.onrender.com</a>
+  </div>
+</div>"""
+
+DEV_FOOTER = f"""
+<div style="text-align:center;margin:28px 0 8px 0;padding-top:12px;
+            border-top:1px solid rgba(255,255,255,.06);
+            font-size:.72rem;color:#7c8698;">
+  Developed by
+  <a href="{DEV_SITE}" target="_blank"
+     style="color:#8b7df0;text-decoration:none;font-weight:600;">Formula2Solutions</a>
+</div>"""
+
+
 def login_page():
     st.markdown('<div class="login-bg"></div>', unsafe_allow_html=True)
     _, mid, _ = st.columns([1, 1.1, 1])
@@ -74,6 +104,7 @@ def login_page():
             remember = st.checkbox("Remember me")
             submitted = st.form_submit_button("Sign In  →", use_container_width=True)
         st.caption("Forgot password? Contact your coach.")
+        st.markdown(DEV_CREDIT, unsafe_allow_html=True)
         if submitted:
             if login(username, password):
                 st.rerun()
@@ -134,6 +165,7 @@ def main():
         if st.session_state.role == "coach":
             page = render_sidebar()
             coach_router(page)
+            st.markdown(DEV_FOOTER, unsafe_allow_html=True)
         else:
             if not st.session_state.get("client_id"):
                 st.error("No client profile linked to this account. Contact your coach.")
@@ -159,6 +191,7 @@ def main():
             </style>""", unsafe_allow_html=True)
             from pages_client import mobile
             mobile.render()
+            st.markdown(DEV_FOOTER, unsafe_allow_html=True)
     except Exception as exc:
         st.error(f"Something went wrong loading this page: **{type(exc).__name__}: "
                  f"{str(exc)[:300]}**")

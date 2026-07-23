@@ -255,7 +255,8 @@ def clients():
                                   key=f"pwin{cid}")
             if st.button("Set password ✓", type="primary", key=f"setpw{cid}"):
                 from services.auth_service import admin_set_password
-                if admin_set_password(c["uid"], newpw.strip()):
+                _uid = c.get("user_id") or c.get("uid")
+                if _uid and admin_set_password(_uid, newpw.strip()):
                     st.session_state.pop(f"newpw{cid}", None)
                     st.success(f"Password changed ✅ New login → "
                                f"**{c['username']} / {newpw.strip()}** — share it with "

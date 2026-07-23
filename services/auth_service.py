@@ -77,3 +77,12 @@ def change_password(user_id: int, old: str, new: str) -> bool:
     execute("UPDATE users SET password_hash = ? WHERE id = ?", (hash_password(new), user_id))
     log_activity(user_id, "password_changed")
     return True
+
+def admin_set_password(user_id: int, new_password: str) -> bool:
+    """Coach resets a user's password without knowing the old one."""
+    if not new_password or len(new_password) < 8:
+        return False
+    execute("UPDATE users SET password_hash = ? WHERE id = ?",
+            (hash_password(new_password), user_id))
+    log_activity(user_id, "password_reset_by_coach", "")
+    return True

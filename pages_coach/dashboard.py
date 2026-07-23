@@ -243,6 +243,27 @@ def clients():
                 ts.add_checklist_item(cid, new_item.strip())
                 st.rerun()
         with d4:
+            # ---- Reset client password ----
+            st.markdown("**🔑 Reset client password**")
+            st.caption("Use this when the client forgot their password. "
+                       "Share the new one securely (WhatsApp/call).")
+            import secrets as _sec
+            if st.button("🎲 Generate new password", key=f"genpw{cid}"):
+                st.session_state[f"newpw{cid}"] = _sec.token_urlsafe(8)
+            newpw = st.text_input("New password (min 8 chars)",
+                                  value=st.session_state.get(f"newpw{cid}", ""),
+                                  key=f"pwin{cid}")
+            if st.button("Set password ✓", type="primary", key=f"setpw{cid}"):
+                from services.auth_service import admin_set_password
+                if admin_set_password(c["uid"], newpw.strip()):
+                    st.session_state.pop(f"newpw{cid}", None)
+                    st.success(f"Password changed ✅ New login → "
+                               f"**{c['username']} / {newpw.strip()}** — share it with "
+                               f"{c['full_name'].split()[0]} now.")
+                else:
+                    st.error("Password must be at least 8 characters.")
+            st.divider()
+
             active = bool(c["is_active"])
             if st.button("Deactivate client" if active else "Reactivate client"):
                 cs.set_active(cid, not active)

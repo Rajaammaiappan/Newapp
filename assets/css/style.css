@@ -1,3 +1,90 @@
+/* ========== FORCE DARK THEME (ignore system light mode) ========== */
+/* Keeps the app consistent even when the phone/PC is in white mode and
+   the Streamlit theme config is missing or overridden. */
+.stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"],
+[data-testid="stToolbar"], .main, section.main {
+  background-color: #0e1117 !important;
+  color: #f5f6fa !important;
+}
+[data-testid="stSidebar"], [data-testid="stSidebarContent"] {
+  background-color: #12151d !important; color: #f5f6fa !important;
+}
+h1,h2,h3,h4,h5,h6,p,li,label,span,div,small { color: inherit; }
+[data-testid="stMarkdownContainer"] { color: #f5f6fa; }
+[data-testid="stCaptionContainer"], .stCaption { color: #9aa4b2 !important; }
+
+/* Inputs / selects / textareas — dark surfaces, light text, ALWAYS */
+[data-baseweb="input"], [data-baseweb="textarea"],
+[data-baseweb="input"] input, [data-baseweb="textarea"] textarea,
+.stTextInput input, .stNumberInput input, .stTextArea textarea,
+.stDateInput input {
+  background-color: #1a1f2b !important;
+  color: #f5f6fa !important;
+  border-color: rgba(255,255,255,.12) !important;
+  caret-color: #6c5ce7;
+}
+input::placeholder, textarea::placeholder { color: #7c8698 !important; }
+[data-baseweb="select"] > div {
+  background-color: #1a1f2b !important;
+  color: #f5f6fa !important;
+  border-color: rgba(255,255,255,.12) !important;
+}
+[data-baseweb="select"] * { color: #f5f6fa !important; }
+[data-baseweb="select"] svg { fill: #9aa4b2 !important; }
+/* dropdown menu list */
+[data-baseweb="popover"] [data-baseweb="menu"],
+ul[data-testid="stSelectboxVirtualDropdown"], [role="listbox"] {
+  background-color: #1a1f2b !important; color: #f5f6fa !important;
+}
+[role="option"] { color: #f5f6fa !important; background-color: transparent !important; }
+[role="option"]:hover, [aria-selected="true"][role="option"] {
+  background-color: rgba(108,92,231,.25) !important;
+}
+/* radio / checkbox / tab labels */
+.stRadio label, .stCheckbox label, .stTabs [data-baseweb="tab"] {
+  color: #f5f6fa !important;
+}
+/* file uploader */
+[data-testid="stFileUploaderDropzone"] {
+  background-color: #1a1f2b !important; color: #cfd6e2 !important;
+  border: 1px dashed rgba(255,255,255,.2) !important;
+}
+[data-testid="stFileUploaderDropzone"] * { color: #cfd6e2 !important; }
+/* metric / expander / forms */
+[data-testid="stExpander"] details, [data-testid="stExpander"] summary,
+[data-testid="stForm"] {
+  background-color: #12151d !important; color: #f5f6fa !important;
+  border-color: rgba(255,255,255,.08) !important;
+}
+[data-testid="stExpander"] summary span { color: #f5f6fa !important; }
+/* download button — match gradient buttons (was white-on-white) */
+.stDownloadButton > button, .stLinkButton > a {
+  width: 100%;
+  background: linear-gradient(135deg, #6c5ce7, #00cec9) !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 12px;
+  font-weight: 600;
+  min-height: 44px;
+}
+.stDownloadButton > button:hover, .stLinkButton > a:hover {
+  filter: brightness(1.08); color:#fff !important;
+}
+.stDownloadButton > button *, .stLinkButton > a * { color:#fff !important; }
+/* plain buttons keep dark surface + light text in any mode */
+.stButton > button {
+  background-color: #1a1f2b;
+  color: #e8ecf3 !important;
+  border: 1px solid rgba(255,255,255,.14);
+}
+/* dataframes / tables */
+[data-testid="stDataFrame"], [data-testid="stTable"] {
+  background-color: #12151d !important; color: #e8ecf3 !important;
+}
+[data-testid="stDataFrame"] * { color: #e8ecf3; }
+/* toasts, alerts keep readable */
+[data-testid="stAlert"] { color: #f5f6fa; }
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 :root {

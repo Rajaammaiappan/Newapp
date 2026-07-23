@@ -1,5 +1,6 @@
 """Chat UI shared by coach and client message pages."""
 import streamlit as st
+from utils import timez as _tz
 from services.message_service import conversation, send_message, mark_read
 
 
@@ -13,7 +14,7 @@ def render_chat(my_user_id: int, other_user_id: int, other_name: str):
     for m in msgs:
         mine = m["sender_id"] == my_user_id
         cls = "bubble-me" if mine else "bubble-them"
-        ts = (m["sent_at"] or "")[:16].replace("T", " ")
+        ts = _tz.nice(m["sent_at"])
         html.append(f'<div class="bubble {cls}">{m["body"]}'
                     f'<div class="bubble-time">{ts}</div></div>')
     html.append("</div>")

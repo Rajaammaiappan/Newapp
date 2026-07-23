@@ -2,7 +2,8 @@
 import datetime
 from database.connection import query, execute
 
-TODAY = lambda: datetime.date.today().isoformat()
+from utils.timez import today as _ltoday, today_str as _ltoday_str
+TODAY = _ltoday_str
 
 # ---- Water ----
 
@@ -91,7 +92,7 @@ def streak(client_id) -> int:
                     WHERE client_id = ? AND completed = 1 ORDER BY log_date DESC LIMIT 400""",
                  (client_id,))
     days = {r["log_date"] for r in rows}
-    d = datetime.date.today()
+    d = _ltoday()
     if d.isoformat() not in days:
         d -= datetime.timedelta(days=1)
     n = 0

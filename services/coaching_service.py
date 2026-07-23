@@ -3,6 +3,7 @@ from datetime import date, timedelta
 
 from database.connection import query, execute
 from utils.calculators import recommend_targets
+from utils.timez import today as _ltoday
 
 CSV_HEADER = "Day,Meal,Time,Food,Calories,Protein,Carbs,Fat,Instructions"
 
@@ -75,7 +76,7 @@ def weigh_in_status(client_id: int):
     last = rows[0]["d"] if rows else None
     if not last:
         return None, None
-    days = (date.today() - date.fromisoformat(last[:10])).days
+    days = (_ltoday() - date.fromisoformat(last[:10])).days
     return days, last[:10]
 
 
@@ -88,7 +89,7 @@ def maybe_send_weekly_reminders(client_id: int, user_id: int):
                      "Please update your weight in Progress Tracker so your coach "
                      "can track your fat-loss target.")
     # generic weekly tracking nudge
-    week_ago = (date.today() - timedelta(days=7)).isoformat()
+    week_ago = (_ltoday() - timedelta(days=7)).isoformat()
     food_days = query(
         "SELECT COUNT(DISTINCT log_date) n FROM food_log WHERE client_id=? AND log_date>=?",
         (client_id, week_ago))[0]["n"]
@@ -101,7 +102,7 @@ def maybe_send_weekly_reminders(client_id: int, user_id: int):
 
 def _notify_once(user_id: int, topic: str, title: str, body: str):
     """Insert notification only if same topic wasn't sent in the last 7 days."""
-    week_ago = (date.today() - timedelta(days=7)).isoformat()
+    week_ago = (_ltoday() - timedelta(days=7)).isoformat()
     dupe = query(
         "SELECT 1 FROM notifications WHERE user_id=? AND type=? AND created_at>=? LIMIT 1",
         (user_id, topic, week_ago))

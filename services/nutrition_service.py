@@ -10,7 +10,8 @@ import requests
 
 from database.connection import query, execute
 
-TODAY = lambda: date.today().isoformat()  # noqa: E731
+from utils.timez import today as _ltoday, today_str as _ltoday_str
+TODAY = _ltoday_str
 
 UPLOAD_DIR = Path(__file__).resolve().parent.parent / "assets" / "uploads" / "food"
 
@@ -66,7 +67,7 @@ def todays_plan_items(client_id, log_date=None):
     plan = ps.active_diet(client_id)
     if not plan:
         return []
-    d = date.fromisoformat(log_date) if log_date else date.today()
+    d = date.fromisoformat(log_date) if log_date else _ltoday()
     day = ps.DAYS[d.weekday()]
     if ps.plan_days(plan["id"]):
         return ps.diet_items_for_day(plan["id"], day)
@@ -147,7 +148,7 @@ def day_totals(client_id, log_date=None):
 
 
 def history_totals(client_id, days=7):
-    since = (date.today() - timedelta(days=days - 1)).isoformat()
+    since = (_ltoday() - timedelta(days=days - 1)).isoformat()
     return query(
         "SELECT log_date, SUM(calories) calories, SUM(protein) protein "
         "FROM food_log WHERE client_id=? AND log_date>=? "

@@ -2,7 +2,8 @@
 import datetime
 from database.connection import query, execute
 
-TODAY = lambda: datetime.date.today().isoformat()
+from utils.timez import today_str as _ltoday_str
+TODAY = _ltoday_str
 
 # ---------------- Diet ----------------
 

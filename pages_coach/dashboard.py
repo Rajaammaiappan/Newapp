@@ -4,6 +4,7 @@ import secrets
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
+from utils import timez as _tz
 from components import theme
 from database.connection import query
 from services import client_service as cs, tracker_service as ts, plan_service as ps
@@ -45,7 +46,7 @@ def dashboard():
         for a in acts:
             st.markdown(f"""<div style="color:#9aa4b2;font-size:.85rem;padding:4px 0;">
               <b style="color:#f5f6fa;">{a['full_name'] or '—'}</b> · {a['action'].replace('_',' ')}
-              · {(a['created_at'] or '')[:16]}</div>""", unsafe_allow_html=True)
+              · {_tz.nice(a['created_at'])}</div>""", unsafe_allow_html=True)
 
 
 def clients():

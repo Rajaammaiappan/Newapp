@@ -21,6 +21,7 @@ from datetime import datetime, date, timedelta
 import requests
 
 from database.connection import query, execute
+from utils.timez import today as _ltoday
 
 AUTH_URL = "https://www.strava.com/oauth/authorize"
 TOKEN_URL = "https://www.strava.com/oauth/token"
@@ -168,14 +169,14 @@ def add_manual_activity(client_id, activity_date, activity_type, name,
 
 
 def activities(client_id: int, days: int = 30):
-    since = (date.today() - timedelta(days=days)).isoformat()
+    since = (_ltoday() - timedelta(days=days)).isoformat()
     return query(
         "SELECT * FROM activity_sync WHERE client_id=? AND activity_date>=? "
         "ORDER BY activity_date DESC, id DESC", (client_id, since))
 
 
 def activity_summary(client_id: int, days: int = 7):
-    since = (date.today() - timedelta(days=days - 1)).isoformat()
+    since = (_ltoday() - timedelta(days=days - 1)).isoformat()
     row = query(
         "SELECT COUNT(*) n, COALESCE(SUM(duration_min),0) mins, "
         "COALESCE(SUM(distance_km),0) km, COALESCE(SUM(calories_burned),0) kcal "

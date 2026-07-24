@@ -167,10 +167,18 @@ def workout_builder():
 
         if plan_id:
             for e in ps.plan_exercises(plan_id):
-                c1, c2 = st.columns([6, 1])
+                vid = (e.get("video_url") or "").strip()
+                c1, c2, c3 = st.columns([5, 1, 1])
                 c1.markdown(f"**{e['day_label'] or ''}** · {e['exercise_name']} — "
-                            f"{e['sets']}×{e['reps']}, rest {e['rest_seconds']}s, {e['weight'] or 'BW'}")
-                if c2.button("🗑", key=f"ex{e['id']}"):
+                            f"{e['sets']}×{e['reps']}, rest {e['rest_seconds']}s, "
+                            f"{e['weight'] or 'BW'}"
+                            + ("  \n<small style='color:#00cec9'>🎥 video attached</small>"
+                               if vid else
+                               "  \n<small style='color:#7c8698'>no video</small>"),
+                            unsafe_allow_html=True)
+                if vid:
+                    c2.link_button("▶️", vid, use_container_width=True)
+                if c3.button("🗑", key=f"ex{e['id']}"):
                     ps.delete_exercise(e["id"])
                     st.rerun()
             with st.form("add_ex", clear_on_submit=True):

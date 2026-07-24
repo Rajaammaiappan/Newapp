@@ -132,6 +132,48 @@ def _home(cid, me):
                 "your deficit is still counted correctly. 👍")
 
     # ---- Chat with coach ----
+    # ---- Workout plan with video demos ----
+    st.markdown("#### 🏋️ My Workout Plan")
+    wplan = ps.active_workout(cid)
+    if not wplan:
+        theme.empty_state("fa-dumbbell", "No workout plan yet",
+                          "Your coach will assign it soon")
+    else:
+        st.caption(f"Plan: **{wplan['name']}** — tap ▶️ next to an exercise "
+                   "to watch how to do it.")
+        days = ps.workout_days(wplan["id"])
+        exercises = ps.plan_exercises(wplan["id"])
+        if days:
+            day_sel = st.radio("Day", days, horizontal=len(days) <= 4,
+                               label_visibility="collapsed", key="wk_day")
+            exercises = [e for e in exercises if e["day_label"] == day_sel]
+        if not exercises:
+            st.caption("No exercises listed for this day.")
+        for e in exercises:
+            bits = []
+            if e.get("sets"):
+                bits.append(f"{e['sets']} sets")
+            if e.get("reps"):
+                bits.append(f"{e['reps']} reps")
+            if e.get("weight"):
+                bits.append(str(e["weight"]))
+            if e.get("rest_seconds"):
+                bits.append(f"{e['rest_seconds']}s rest")
+            video = (e.get("video_url") or "").strip()
+            if video:
+                c1, c2 = st.columns([3, 1])
+                c1.markdown(f"**{e['exercise_name']}**  \n"
+                            f"<small style='color:#9aa4b2'>{' · '.join(bits)}</small>",
+                            unsafe_allow_html=True)
+                c2.link_button("▶️ Watch", video, use_container_width=True)
+            else:
+                st.markdown(f"**{e['exercise_name']}**  \n"
+                            f"<small style='color:#9aa4b2'>{' · '.join(bits)}</small>",
+                            unsafe_allow_html=True)
+            if e.get("notes"):
+                st.caption(f"💡 {e['notes']}")
+
+    # ---- Chat with coach ----
     unread = query(
         "SELECT COUNT(*) n FROM messages WHERE receiver_id=? AND is_read=0",
         (st.session_state.user_id,))[0]["n"]

@@ -71,13 +71,13 @@ def profile_export_text(client: dict) -> str:
 
 
 WORKOUT_CSV_EXAMPLE = (
-    "Day,Exercise,Sets,Reps,Rest,Weight,Notes\n"
-    "Day 1 - Push,Barbell Bench Press,4,8-10,90,40kg,Keep elbows 45 degrees\n"
-    "Day 1 - Push,Incline Dumbbell Press,3,10-12,75,14kg,\n"
-    "Day 1 - Push,Shoulder Press,3,10,60,12kg,Slow negative\n"
-    "Day 2 - Pull,Lat Pulldown,4,10-12,75,45kg,Full stretch at top\n"
-    "Day 2 - Pull,Seated Row,3,12,60,40kg,\n"
-    "Day 3 - Legs,Goblet Squat,4,12,90,20kg,Heels down\n"
+    "Day,Exercise,Sets,Reps,Rest,Weight,Notes,Video\n"
+    "Day 1 - Push,Barbell Bench Press,4,8-10,90,40kg,Keep elbows 45 degrees,https://youtu.be/xxxxxxxx\n"
+    "Day 1 - Push,Incline Dumbbell Press,3,10-12,75,14kg,,https://youtu.be/xxxxxxxx\n"
+    "Day 1 - Push,Shoulder Press,3,10,60,12kg,Slow negative,\n"
+    "Day 2 - Pull,Lat Pulldown,4,10-12,75,45kg,Full stretch at top,https://youtu.be/xxxxxxxx\n"
+    "Day 2 - Pull,Seated Row,3,12,60,40kg,,\n"
+    "Day 3 - Legs,Goblet Squat,4,12,90,20kg,Heels down,https://youtu.be/xxxxxxxx\n"
 )
 
 
@@ -103,7 +103,7 @@ def workout_prompt_text(client: dict) -> str:
         "(first row is the header; Day can be any label like 'Day 1 - Push' or 'Monday'):",
         "",
         WORKOUT_CSV_EXAMPLE,
-        "Rest is in seconds. Output the full weekly plan in that CSV format so I can",
+        "Rest is in seconds. The Video column is optional — put a YouTube demo link\nfor the exercise when you are confident the link is real, otherwise leave it\nempty (I will fill my own links). Output the full weekly plan in that CSV\nformat so I can",
         "upload it directly into my coaching app.",
     ]
     return "\n".join(lines)

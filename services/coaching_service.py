@@ -70,6 +70,45 @@ def profile_export_text(client: dict) -> str:
     return "\n".join(lines)
 
 
+WORKOUT_CSV_EXAMPLE = (
+    "Day,Exercise,Sets,Reps,Rest,Weight,Notes\n"
+    "Day 1 - Push,Barbell Bench Press,4,8-10,90,40kg,Keep elbows 45 degrees\n"
+    "Day 1 - Push,Incline Dumbbell Press,3,10-12,75,14kg,\n"
+    "Day 1 - Push,Shoulder Press,3,10,60,12kg,Slow negative\n"
+    "Day 2 - Pull,Lat Pulldown,4,10-12,75,45kg,Full stretch at top\n"
+    "Day 2 - Pull,Seated Row,3,12,60,40kg,\n"
+    "Day 3 - Legs,Goblet Squat,4,12,90,20kg,Heels down\n"
+)
+
+
+def workout_prompt_text(client: dict) -> str:
+    """Client summary + ready-to-paste AI prompt for a workout plan."""
+    lines = [
+        "==================== CLIENT PROFILE ====================",
+        f"Name: {client.get('full_name','')}",
+        f"Gender: {client.get('gender','')} | Age: {client.get('age','')}",
+        f"Height: {client.get('height_cm','')} cm | Weight: {client.get('current_weight_kg','')} kg "
+        f"| Target: {client.get('target_weight_kg','')} kg",
+        f"Goal: {(client.get('goal') or '').replace('_',' ')} | Activity level: {client.get('activity_level','')}",
+        f"Medical conditions: {client.get('medical_conditions') or 'None reported'}",
+        f"Notes: {client.get('notes') or '-'}",
+        "",
+        "==================== AI PROMPT (copy everything below into ChatGPT / Claude / Gemini) ====================",
+        "",
+        "You are an expert strength and conditioning coach. Create a weekly workout",
+        "plan for the client described above. Assume a normal commercial gym.",
+        "Respect any medical conditions listed. Include warm-up notes where useful.",
+        "",
+        "IMPORTANT: Give the final answer ONLY as CSV in exactly this format",
+        "(first row is the header; Day can be any label like 'Day 1 - Push' or 'Monday'):",
+        "",
+        WORKOUT_CSV_EXAMPLE,
+        "Rest is in seconds. Output the full weekly plan in that CSV format so I can",
+        "upload it directly into my coaching app.",
+    ]
+    return "\n".join(lines)
+
+
 # ---------------- Weekly weigh-in reminder ----------------
 def weigh_in_status(client_id: int):
     """(days_since_last_weigh, last_date | None)."""

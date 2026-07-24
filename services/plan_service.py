@@ -168,6 +168,58 @@ def delete_exercise(ex_id: int):
     execute("DELETE FROM exercises WHERE id = ?", (ex_id,))
 
 
+def import_workout_plan(rows: list, name: str, client_id=None, is_template=False):
+    """Create a workout plan from parsed file rows.
+
+    Each row: dict with keys (case-insensitive): day, exercise, sets, reps,
+    rest, weight, notes, video. Returns (plan_id, exercise_count).
+    """
+    pid = create_workout_plan(name, client_id=client_id, is_template=is_template)
+    n = 0
+    for r in rows:
+        low = {str(k).strip().lower(): v for k, v in r.items()}
+        ex_name = str(low.get("exercise") or low.get("exercise name") or
+                      low.get("exercise_name") or low.get("name") or "").strip()
+        if not ex_name:
+            continue
+
+        def txt(*keys):
+            for k in keys:
+                v = low.get(k)
+                if v is not None and str(v).strip() not in ("", "nan"):
+                    return str(v).strip()
+            return ""
+
+        def num(*keys):
+            raw = txt(*keys)
+            if not raw:
+                return None
+            digits = "".join(ch for ch in raw if ch.isdigit())
+            return int(digits) if digits else None
+
+        add_exercise(
+            pid,
+            txt("day", "day label", "day_label") or "Day 1",
+            ex_name,
+            num("sets"),
+            txt("reps", "rep", "repetitions"),
+            num("rest", "rest seconds", "rest_seconds"),
+            txt("weight", "load"),
+            txt("notes", "instructions", "note"),
+            "",
+            txt("video", "video url", "video_url", "link"))
+        n += 1
+    return pid, n
+
+
+def workout_days(plan_id: int):
+    """Distinct day labels in a workout plan, in insertion order."""
+    rows = query("SELECT day_label d, MIN(id) o FROM exercises WHERE plan_id=? "
+                 "AND day_label IS NOT NULL AND day_label!='' "
+                 "GROUP BY day_label ORDER BY o", (plan_id,))
+    return [r["d"] for r in rows]
+
+
 def assign_workout_template(template_id: int, client_id: int):
     tpl = query("SELECT * FROM workout_plans WHERE id = ?", (template_id,))[0]
     new_id = create_workout_plan(tpl["name"], client_id=client_id)

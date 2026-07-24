@@ -138,7 +138,8 @@ def diet_builder():
 
 def workout_builder():
     theme.section_title("fa-dumbbell", "Workout Builder")
-    t1, t2, t3 = st.tabs(["📚 Templates", "✏️ Build / Edit Plan", "📤 Assign to Client"])
+    t1, t2, t3, t4 = st.tabs(["📚 Templates", "✏️ Build / Edit Plan",
+                              "📤 Assign to Client", "🤖 AI Import"])
 
     with t1:
         for tpl in ps.workout_templates():
@@ -201,3 +202,64 @@ def workout_builder():
             if cid and st.button("Assign workout plan", use_container_width=True):
                 ps.assign_workout_template(tpls[[t["name"] for t in tpls].index(tsel)]["id"], cid)
                 st.success("Workout plan assigned ✅ (previous plan deactivated)")
+
+    with t4:
+        from services import coaching_service as coach_svc
+        st.markdown("""**Same workflow as the diet plan:**
+1. Download the **client profile + AI prompt** below
+2. Paste it into ChatGPT / Claude / Gemini → it replies with a CSV workout plan
+3. Save that reply as a `.csv` file and upload it here
+4. Pick the client → plan is created day-wise automatically 💪""")
+
+        wcl = _client_selector("wai_profile")
+        if wcl:
+            from services.client_service import get_client as _gc
+            _c = _gc(wcl)
+            st.download_button(
+                "⬇️ Download Profile + Workout AI Prompt",
+                coach_svc.workout_prompt_text(_c),
+                file_name=f"{(_c['full_name'] or 'client').replace(' ','_')}_workout_prompt.txt",
+                use_container_width=True)
+
+        with st.expander("📋 See the exact CSV format the AI must give"):
+            st.code(coach_svc.WORKOUT_CSV_EXAMPLE, language="text")
+            st.download_button("⬇️ Download blank template CSV",
+                               coach_svc.WORKOUT_CSV_EXAMPLE,
+                               file_name="workout_plan_template.csv")
+
+        up = st.file_uploader("Upload workout plan (.csv or .xlsx)",
+                              type=["csv", "xlsx"], key="wk_upload")
+        if up is not None:
+            import pandas as pd
+            try:
+                df = (pd.read_csv(up) if up.name.lower().endswith(".csv")
+                      else pd.read_excel(up))
+                df.columns = [str(c).strip() for c in df.columns]
+                st.markdown(f"**Preview — {len(df)} exercises found:**")
+                st.dataframe(df.head(15), use_container_width=True, hide_index=True)
+                target_kind = st.radio("Import as", ["Assign directly to a client",
+                                                     "Save as reusable template"],
+                                       horizontal=True, key="wk_kind")
+                imp_cid = (_client_selector("wk_imp")
+                           if target_kind.startswith("Assign") else None)
+                pname = st.text_input("Plan name", value=up.name.rsplit(".", 1)[0][:40],
+                                      key="wk_name")
+                if st.button("📥 Import Workout Plan", type="primary",
+                             use_container_width=True):
+                    rows = df.to_dict("records")
+                    pid, n = ps.import_workout_plan(
+                        rows, pname.strip() or "Imported Workout",
+                        client_id=imp_cid, is_template=imp_cid is None)
+                    if n == 0:
+                        st.error("No exercises found — check the 'Exercise' column "
+                                 "has values.")
+                    else:
+                        days = ps.workout_days(pid)
+                        st.success(f"Imported ✅ {n} exercises"
+                                   + (f" across: {', '.join(days)}" if days else "")
+                                   + (". Client sees it in Today's Workout!"
+                                      if imp_cid else
+                                      ". Assign it from the Assign tab."))
+            except Exception as e:
+                st.error(f"Could not read the file: {e}. Make sure it's a valid "
+                         "CSV/Excel with the template columns.")

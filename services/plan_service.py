@@ -168,12 +168,36 @@ def delete_exercise(ex_id: int):
     execute("DELETE FROM exercises WHERE id = ?", (ex_id,))
 
 
+_WK_ALIASES = {"monday": "Mon", "mon": "Mon", "tuesday": "Tue", "tue": "Tue",
+               "tues": "Tue", "wednesday": "Wed", "wed": "Wed", "thursday": "Thu",
+               "thu": "Thu", "thur": "Thu", "thurs": "Thu", "friday": "Fri",
+               "fri": "Fri", "saturday": "Sat", "sat": "Sat", "sunday": "Sun",
+               "sun": "Sun"}
+
+
+def weekday_of_label(label: str):
+    """Return Mon..Sun if a day label begins with / contains a weekday, else None."""
+    if not label:
+        return None
+    low = str(label).strip().lower()
+    # check the first token first (e.g. 'Mon - 20min Easy Run')
+    first = low.replace("-", " ").replace(":", " ").split()[0] if low.split() else ""
+    if first in _WK_ALIASES:
+        return _WK_ALIASES[first]
+    for key, val in _WK_ALIASES.items():
+        if low.startswith(key):
+            return val
+    return None
+
+
 def import_workout_plan(rows: list, name: str, client_id=None, is_template=False):
     """Create a workout plan from parsed file rows.
 
     Each row: dict with keys (case-insensitive): day, exercise, sets, reps,
-    rest, weight, notes, video. Returns (plan_id, exercise_count).
+    rest, weight, notes, video. If a 'VIDEO: <url>' is embedded in the notes,
+    it is auto-extracted. Returns (plan_id, exercise_count).
     """
+    import re as _re
     pid = create_workout_plan(name, client_id=client_id, is_template=is_template)
     n = 0
     for r in rows:
@@ -197,6 +221,15 @@ def import_workout_plan(rows: list, name: str, client_id=None, is_template=False
             digits = "".join(ch for ch in raw if ch.isdigit())
             return int(digits) if digits else None
 
+        notes = txt("notes", "instructions", "note")
+        video = txt("video", "video url", "video_url", "link")
+        # pull "VIDEO: https://..." out of the notes if present
+        m = _re.search(r"VIDEO:\s*(\S+)", notes, _re.IGNORECASE)
+        if m:
+            if not video:
+                video = m.group(1).strip()
+            notes = notes[:m.start()].strip(" .-")
+
         add_exercise(
             pid,
             txt("day", "day label", "day_label") or "Day 1",
@@ -205,9 +238,9 @@ def import_workout_plan(rows: list, name: str, client_id=None, is_template=False
             txt("reps", "rep", "repetitions"),
             num("rest", "rest seconds", "rest_seconds"),
             txt("weight", "load"),
-            txt("notes", "instructions", "note"),
+            notes,
             "",
-            txt("video", "video url", "video_url", "link"))
+            video)
         n += 1
     return pid, n
 

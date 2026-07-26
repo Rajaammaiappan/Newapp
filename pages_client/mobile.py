@@ -133,43 +133,55 @@ def _home(cid, me):
 
     # ---- Chat with coach ----
     # ---- Workout plan with video demos ----
-    st.markdown("#### 🏋️ My Workout Plan")
+    st.markdown("#### 🏋️ Today's Workout")
     wplan = ps.active_workout(cid)
     if not wplan:
         theme.empty_state("fa-dumbbell", "No workout plan yet",
                           "Your coach will assign it soon")
     else:
-        st.caption(f"Plan: **{wplan['name']}** — tap ▶️ next to an exercise "
-                   "to watch how to do it.")
+        st.caption(f"Plan: **{wplan['name']}**")
         days = ps.workout_days(wplan["id"])
         exercises = ps.plan_exercises(wplan["id"])
         if days:
-            day_sel = st.radio("Day", days, horizontal=len(days) <= 4,
+            # auto-select today by matching the weekday inside each day label
+            today_wd = ps.DAYS[datetime.date.today().weekday()]
+            default_idx = 0
+            for i, d in enumerate(days):
+                if ps.weekday_of_label(d) == today_wd:
+                    default_idx = i
+                    break
+            day_sel = st.radio("Day", days, index=default_idx,
+                               horizontal=len(days) <= 4,
                                label_visibility="collapsed", key="wk_day")
+            if ps.weekday_of_label(day_sel) == today_wd:
+                st.caption("📅 Showing **today's** workout")
             exercises = [e for e in exercises if e["day_label"] == day_sel]
+
+        # rest day / notes-only handling
         if not exercises:
-            st.caption("No exercises listed for this day.")
+            st.info("😌 Rest day or no exercises listed — enjoy the recovery!")
+        real_ex = [e for e in exercises
+                   if "note" not in (e["exercise_name"] or "").lower()
+                   or e.get("sets")]
         for e in exercises:
             bits = []
             if e.get("sets"):
                 bits.append(f"{e['sets']} sets")
             if e.get("reps"):
                 bits.append(f"{e['reps']} reps")
-            if e.get("weight"):
+            if e.get("weight") and str(e["weight"]).lower() not in ("bodyweight", "bw"):
                 bits.append(str(e["weight"]))
             if e.get("rest_seconds"):
                 bits.append(f"{e['rest_seconds']}s rest")
+            meta = " · ".join(bits)
             video = (e.get("video_url") or "").strip()
+            st.markdown(
+                f"""<div class="fc-card" style="margin-bottom:8px;padding:12px 14px;">
+                  <div style="font-weight:600;">{e['exercise_name']}</div>
+                  {f'<div style="color:#9aa4b2;font-size:.82rem;margin-top:2px;">{meta}</div>' if meta else ''}
+                </div>""", unsafe_allow_html=True)
             if video:
-                c1, c2 = st.columns([3, 1])
-                c1.markdown(f"**{e['exercise_name']}**  \n"
-                            f"<small style='color:#9aa4b2'>{' · '.join(bits)}</small>",
-                            unsafe_allow_html=True)
-                c2.link_button("▶️ Watch", video, use_container_width=True)
-            else:
-                st.markdown(f"**{e['exercise_name']}**  \n"
-                            f"<small style='color:#9aa4b2'>{' · '.join(bits)}</small>",
-                            unsafe_allow_html=True)
+                st.link_button("▶️ Watch demo", video, use_container_width=True)
             if e.get("notes"):
                 st.caption(f"💡 {e['notes']}")
 
